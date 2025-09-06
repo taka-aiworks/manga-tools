@@ -418,17 +418,35 @@ function updateControlsFromElement() {
     const xEl = document.getElementById('elementX');
     const yEl = document.getElementById('elementY');
     const typeEl = document.getElementById('elementType');
+    const characterSettings = document.getElementById('characterSettings');
     
     if (scaleEl) scaleEl.value = selectedElement.scale || 1.0;
     if (xEl) xEl.value = selectedElement.x || 0.5;
     if (yEl) yEl.value = selectedElement.y || 0.5;
     
-    if (typeEl) {
-        if (selectedCharacter) {
-            typeEl.value = 'character';
-        } else if (selectedBubble) {
-            typeEl.value = 'bubble';
+    if (typeEl && selectedCharacter) {
+        typeEl.value = 'character';
+        
+        // キャラクター設定パネルを表示
+        if (characterSettings) {
+            characterSettings.style.display = 'block';
+            
+            // 現在の設定値を反映
+            const facingEl = document.getElementById('characterFacing');
+            const gazeEl = document.getElementById('characterGaze');
+            const poseEl = document.getElementById('characterPose');
+            const expressionEl = document.getElementById('characterExpression');
+            
+            if (facingEl) facingEl.value = selectedCharacter.facing || 'front';
+            if (gazeEl) gazeEl.value = selectedCharacter.gaze || 'center';
+            if (poseEl) poseEl.value = selectedCharacter.pose || 'standing';
+            if (expressionEl) expressionEl.value = selectedCharacter.expression || 'neutral';
         }
+    } else {
+        if (characterSettings) {
+            characterSettings.style.display = 'none';
+        }
+        if (typeEl) typeEl.value = 'bubble';
     }
 }
 
