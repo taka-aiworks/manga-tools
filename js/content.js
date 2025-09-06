@@ -120,29 +120,61 @@ function createCharacterElement(character, panel) {
     const element = document.createElement('div');
     element.className = 'character-placeholder';
     element.dataset.charId = character.id;
-    element.textContent = character.name;
+    
+    // キャラクターの向きと視線を反映
+    if (character.facing) {
+        element.classList.add(`character-facing-${character.facing}`);
+    }
+    if (character.gaze) {
+        element.classList.add(`gaze-${character.gaze}`);
+    }
+    
+    // 人型キャラクター構造を作成
+    element.innerHTML = `
+        <div class="character-body">
+            <div class="character-head">
+                <div class="character-eyes">
+                    <div class="character-eye"></div>
+                    <div class="character-eye"></div>
+                </div>
+            </div>
+            <div class="character-arms"></div>
+            <div class="character-torso"></div>
+            <div class="character-legs">
+                <div class="character-leg"></div>
+                <div class="character-leg"></div>
+            </div>
+        </div>
+        <div class="character-name">${character.name}</div>
+    `;
     
     // 初期位置設定
     updateCharacterElementPosition(element, character, panel);
-    
-    // カーソル設定
     element.style.cursor = 'move';
     
-    // ===== イベントリスナー（1回だけ登録） =====
+    // イベントリスナー
+    let clickCount = 0;
     element.addEventListener('mousedown', function(e) {
-        console.log('👤 キャラクタークリック:', character.name);
+        clickCount++;
+        console.log('👤 キャラクタークリック:', character.name, 'count:', clickCount);
+        
         e.stopPropagation();
         e.preventDefault();
         
-        // 既にドラッグ中なら無視
+        setTimeout(() => { clickCount = 0; }, 200);
+        
+        if (clickCount > 1) {
+            console.log('🚫 重複クリック無視');
+            return;
+        }
+        
         if (isDragging) {
-            console.log('⚠️ 既にドラッグ中');
+            console.log('⚠️ 既にドラッグ中 - 無視');
             return;
         }
         
         selectCharacter(character);
         
-        // ドラッグ開始
         isDragging = true;
         selectedElement = character;
         
