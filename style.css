@@ -658,3 +658,144 @@ html[data-theme="dark"] input::placeholder,
 html[data-theme="dark"] textarea::placeholder {
     color: #888 !important;
 }
+
+
+
+
+
+
+/* 人型キャラクター表示 */
+.character-placeholder {
+    position: absolute;
+    pointer-events: all;
+    cursor: move;
+    border: 2px solid #0066ff;
+    background: rgba(0, 102, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 9px;
+    color: #0066ff;
+    font-weight: bold;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    padding: 2px;
+}
+
+.character-body {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* 頭部 */
+.character-head {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #667eea;
+    border: 2px solid #333;
+    margin-bottom: 2px;
+    position: relative;
+}
+
+/* 目（視線表示） */
+.character-eyes {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 4px;
+}
+
+.character-eye {
+    width: 3px;
+    height: 3px;
+    background: #333;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+/* 体 */
+.character-torso {
+    width: 8px;
+    height: 16px;
+    background: #667eea;
+    border: 1px solid #333;
+    margin-bottom: 2px;
+}
+
+/* 腕 */
+.character-arms {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 2px;
+    background: #667eea;
+    border: 1px solid #333;
+}
+
+/* 脚 */
+.character-legs {
+    display: flex;
+    gap: 2px;
+}
+
+.character-leg {
+    width: 3px;
+    height: 8px;
+    background: #667eea;
+    border: 1px solid #333;
+}
+
+/* 向き別スタイル */
+.character-facing-left .character-eyes {
+    transform: translateX(-70%);
+}
+
+.character-facing-right .character-eyes {
+    transform: translateX(-30%);
+}
+
+.character-facing-back .character-head {
+    background: #5566cc;
+}
+
+.character-facing-back .character-eyes {
+    display: none;
+}
+
+/* 視線方向 */
+.gaze-left .character-eye {
+    transform: translateX(-1px);
+}
+
+.gaze-right .character-eye {
+    transform: translateX(1px);
+}
+
+.gaze-up .character-eye {
+    transform: translateY(-1px);
+}
+
+.gaze-down .character-eye {
+    transform: translateY(1px);
+}
+
+/* キャラクター名表示 */
+.character-name {
+    font-size: 8px;
+    margin-top: 1px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
