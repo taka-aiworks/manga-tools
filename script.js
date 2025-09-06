@@ -843,3 +843,40 @@ document.addEventListener('keydown', function(e) {
         deleteSelected();
     }
 });
+
+
+
+// 手動でダークモード機能を追加
+function manualToggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const newTheme = current === 'dark' ? 'light' : 'dark';
+    
+    document.documentElement.setAttribute('data-theme', newTheme);
+    document.body.setAttribute('data-theme', newTheme);
+    
+    if (newTheme === 'dark') {
+        document.body.style.backgroundColor = '#1a1a1a';
+        document.body.style.color = '#e0e0e0';
+        document.getElementById('themeToggle').textContent = '☀️ ライトモード';
+    } else {
+        document.body.style.backgroundColor = '#f0f0f0';
+        document.body.style.color = '#333';
+        document.getElementById('themeToggle').textContent = '🌙 ダークモード';
+    }
+    
+    localStorage.setItem('theme', newTheme);
+    console.log('Theme changed to:', newTheme);
+}
+
+// ボタンにイベント追加
+document.getElementById('themeToggle').onclick = manualToggleTheme;
+
+console.log('Manual dark mode setup complete');
+
+
+// 初期化実行
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+    initializeApp();
+}
