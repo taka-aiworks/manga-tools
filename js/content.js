@@ -83,6 +83,7 @@ function updateCharacterOverlay() {
     });
 }
 
+// createCharacterElement関数の最後に追加
 function createCharacterElement(character, panel) {
     const element = document.createElement('div');
     element.className = 'character-placeholder';
@@ -121,8 +122,23 @@ function createCharacterElement(character, panel) {
         element.style.transform = transform.trim();
     }
     
+    // ===== ここを追加 =====
+    element.addEventListener('mousedown', function(e) {
+        console.log('👤 キャラクター要素クリック:', character.name);
+        e.stopPropagation();
+        e.preventDefault();
+        selectCharacter(character);
+        startDragging(e, character);
+    });
+    
+    element.addEventListener('click', function(e) {
+        console.log('👤 キャラクター要素click:', character.name);
+        e.stopPropagation();
+    });
+    
     return element;
 }
+
 
 // ===== 吹き出し管理 =====
 function addBubble(bubbleType) {
