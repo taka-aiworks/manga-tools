@@ -68,84 +68,93 @@ function applyCharacterLayout(layoutName) {
     updateElementCount();
 }
 
+// updateCharacterOverlay関数を完全に書き換え
 function updateCharacterOverlay() {
     const overlay = document.getElementById('characterOverlay');
     if (!overlay) return;
     
+    // 既存の要素を全て削除（重複防止）
     overlay.innerHTML = '';
     
     characters.forEach(character => {
         const panel = panels.find(p => p.id === character.panelId);
         if (!panel) return;
         
-        const element = createCharacterElement(character, panel);
-        overlay.appendChild(element);
+        // 既存の要素があるかチェック
+        let element = overlay.querySelector(`[data-char-id="${character.id}"]`);
+        
+        if (!element) {
+            // 新しい要素を作成
+            element = createCharacterElement(character, panel);
+            overlay.appendChild(element);
+        } else {
+            // 既存の要素の位置を更新
+            updateCharacterElementPosition(element, character, panel);
+        }
     });
 }
 
-// createCharacterElement関数の最後に追加
-function createCharacterElement(character, panel) {
-    const element = document.createElement('div');
-    element.className = 'character-placeholder';
-    
-    if (selectedCharacter === character) {
-        element.classList.add('selected');
-    }
-    
-    element.dataset.charId = character.id;
-    element.textContent = character.name;
-    
-    // 位置とサイズ計算
+// 位置更新専用関数
+function updateCharacterElementPosition(element, character, panel) {
     const charX = panel.x + (panel.width * character.x) - 30;
     const charY = panel.y + (panel.height * character.y) - 20;
     const charWidth = 60 * character.scale;
     const charHeight = 40 * character.scale;
     
-    // スタイル適用
     Object.assign(element.style, {
         left: charX + 'px',
         top: charY + 'px',
         width: charWidth + 'px',
-        height: charHeight + 'px',
-        cursor: 'move'
+        height: charHeight + 'px'
     });
     
-    // 変形適用
-    let transform = '';
-    if (character.rotation) {
-        transform += `rotate(${character.rotation}deg) `;
+    // 選択状態の更新
+    if (selectedCharacter === character) {
+        element.classList.add('selected');
+    } else {
+        element.classList.remove('selected');
     }
-    if (character.flip) {
-        transform += 'scaleX(-1) ';
-    }
-    if (transform) {
-        element.style.transform = transform.trim();
-    }
+}
+
+function createCharacterElement(character, panel) {
+    const element = document.createElement('div');
+    element.className = 'character-placeholder';
+    element.dataset.charId = character.id;
+    element.textContent = character.name;
     
-   // ===== イベントリスナーの修正 =====
+    // 初期位置設定
+    updateCharacterElementPosition(element, character, panel);
+    
+    // カーソル設定
+    element.style.cursor = 'move';
+    
+    // ===== イベントリスナー（1回だけ登録） =====
     element.addEventListener('mousedown', function(e) {
-        console.log('👤 キャラクター要素クリック:', character.name);
-        e.stopPropagation(); // 重要！キャンバスイベントを停止
+        console.log('👤 キャラクタークリック:', character.name);
+        e.stopPropagation();
         e.preventDefault();
         
-        // 選択とドラッグ開始
+        // 既にドラッグ中なら無視
+        if (isDragging) {
+            console.log('⚠️ 既にドラッグ中');
+            return;
+        }
+        
         selectCharacter(character);
         
-        // ドラッグ開始フラグ
+        // ドラッグ開始
         isDragging = true;
         selectedElement = character;
         
-        // ドラッグオフセット計算
         const coords = getCanvasCoordinates(e);
         dragOffset.x = coords.x - (panel.x + panel.width * character.x);
         dragOffset.y = coords.y - (panel.y + panel.height * character.y);
         
-        console.log('🚀 キャラクタードラッグ開始');
+        console.log('🚀 ドラッグ開始');
     });
     
     return element;
 }
-
 
 // ===== 吹き出し管理 =====
 function addBubble(bubbleType) {
