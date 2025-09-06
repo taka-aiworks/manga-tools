@@ -110,6 +110,12 @@ function setupEventListeners() {
 // ===== マウスイベント処理 =====
 function handleMouseDown(e) {
     console.log('🖱️ マウスダウン');
+        // キャラクター要素に直接クリックされた場合
+    if (e.target.classList.contains('character-placeholder')) {
+        console.log('🎯 キャラクター要素に直接クリック');
+        return; // イベントはキャラクター要素側で処理
+    }
+    
     const coords = getCanvasCoordinates(e);
     const x = coords.x;
     const y = coords.y;
