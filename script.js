@@ -251,16 +251,18 @@ function redrawCanvas() {
 
 // パネル描画
 function drawPanel(panel, isSelected = false) {
-    ctx.strokeStyle = isSelected ? '#ff6600' : '#000000';
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    
+    ctx.strokeStyle = isSelected ? '#ff8833' : (isDark ? '#e0e0e0' : '#000000');
     ctx.lineWidth = isSelected ? 3 : 2;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.fillStyle = isDark ? 'rgba(64, 64, 64, 0.8)' : 'rgba(255, 255, 255, 0.8)';
     
     // パネル枠
     ctx.fillRect(panel.x, panel.y, panel.width, panel.height);
     ctx.strokeRect(panel.x, panel.y, panel.width, panel.height);
     
     // パネル番号
-    ctx.fillStyle = isSelected ? '#ff6600' : '#666666';
+    ctx.fillStyle = isSelected ? '#ff8833' : (isDark ? '#b0b0b0' : '#666666');
     ctx.font = '14px Arial';
     ctx.fillText(`${panel.id}`, panel.x + 10, panel.y + 25);
 }
