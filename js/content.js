@@ -122,18 +122,25 @@ function createCharacterElement(character, panel) {
         element.style.transform = transform.trim();
     }
     
-    // ===== ここを追加 =====
+   // ===== イベントリスナーの修正 =====
     element.addEventListener('mousedown', function(e) {
         console.log('👤 キャラクター要素クリック:', character.name);
-        e.stopPropagation();
+        e.stopPropagation(); // 重要！キャンバスイベントを停止
         e.preventDefault();
+        
+        // 選択とドラッグ開始
         selectCharacter(character);
-        startDragging(e, character);
-    });
-    
-    element.addEventListener('click', function(e) {
-        console.log('👤 キャラクター要素click:', character.name);
-        e.stopPropagation();
+        
+        // ドラッグ開始フラグ
+        isDragging = true;
+        selectedElement = character;
+        
+        // ドラッグオフセット計算
+        const coords = getCanvasCoordinates(e);
+        dragOffset.x = coords.x - (panel.x + panel.width * character.x);
+        dragOffset.y = coords.y - (panel.y + panel.height * character.y);
+        
+        console.log('🚀 キャラクタードラッグ開始');
     });
     
     return element;
