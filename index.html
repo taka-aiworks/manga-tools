@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ネーム制作支援ツール - 漫画ネームを簡単作成</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f0f0; }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 { font-size: 28px; margin-bottom: 8px; }
+        .header p { font-size: 16px; opacity: 0.9; }
+        
+        .container {
+            display: flex;
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            min-height: calc(100vh - 120px);
+        }
+        
+        .story-panel {
+            width: 250px;
+            background: #f8f9fa;
+            border-right: 1px solid #ddd;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        
+        .main-canvas {
+            flex: 1;
+            padding: 20px;
+            background: #fafafa;
+            position: relative;
+        }
+        
+        .tools-panel {
+            width: 350px;
+            background: white;
+            border-left: 1px solid #ddd;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        
+        .canvas-container {
+            position: relative;
+            display: inline-block;
+            border: 2px solid #ddd;
+            background: white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        #nameCanvas {
+            display: block;
+            cursor: crosshair;
+        }
+        
+        .character-overlay, .bubble-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+        
+        .character-placeholder {
+            position: absolute;
+            pointer-events: all;
+            cursor: move;
+            border: 2px dashed #0066ff;
+            background: rgba(0, 102, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #0066ff;
+            font-weight: bold;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+        
+        .speech-bubble {
+            position: absolute;
+            pointer-events: all;
+            cursor: move;
+            background: white;
+            border: 2px solid #333;
+            border-radius: 20px;
+            padding: 8px 12px;
+            font-size: 12px;
+            min-width: 60px;
+            min-height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            line-height: 1.2;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .speech-bubble.selected {
+            border-color: #ff6600;
+            background: #fff8f0;
+        }
+        
+        .speech-bubble.shout {
+            border-style: solid;
+            border-width: 3px;
+            font-weight: bold;
+            background: #fffacd;
+        }
+        
+        .speech-bubble.whisper {
+            border-style: dashed;
+            border-width: 1px;
+            font-size: 10px;
+            opacity: 0.8;
+        }
+        
+        .speech-bubble.thought {
+            border-radius: 30px;
+            border-style: dotted;
+            background: #f0f8ff;
+        }
+        
+        .speech-bubble.narration {
+            border-radius: 5px;
+            background: #f5f5f5;
+            border: 1px solid #999;
+        }
+        
+        .bubble-tail {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-style: solid;
+        }
+        
+        .bubble-tail.bottom-left {
+            bottom: -8px;
+            left: 20px;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid #333;
+        }
+        
+        .section {
+            margin-bottom: 20px;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+        }
+        
+        .section h3 {
+            margin-bottom: 10px;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 4px;
+            font-size: 14px;
+        }
+        
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        
+        .template-card {
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+            background: white;
+            font-size: 11px;
+        }
+        
+        .template-card:hover {
+            border-color: #667eea;
+            transform: translateY(-1px);
+        }
+        
+        .template-card.active {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .layout-patterns {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+        
+        .pattern-card {
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 10px;
+            transition: all 0.2s ease;
+            background: white;
+        }
+        
+        .pattern-card:hover {
+            border-color: #0066ff;
+            background: #f0f8ff;
+        }
+        
+        .character-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+        
+        .char-item {
+            display: flex;
+            align-items: center;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: white;
+            font-size: 11px;
+        }
+        
+        .char-item:hover {
+            border-color: #0066ff;
+            background: #f0f8ff;
+        }
+        
+        .char-icon {
+            width: 24px;
+            height: 24px;
+            background: #667eea;
+            border-radius: 50%;
+            margin-right: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .control-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .control-group label {
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .control-group input, .control-group select {
+            width: 80px;
+            font-size: 11px;
+        }
+        
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a6fd8; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #5a6268; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; }
+        
+        .export-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #333;
+            color: white;
+            padding: 6px 20px;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .canvas-info {
+            margin-bottom: 12px;
+            padding: 8px;
+            background: #e8f4f8;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+        
+        .scene-buttons {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 4px;
+        }
+        
+        .scene-btn {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            background: white;
+            font-size: 11px;
+            transition: all 0.2s ease;
+        }
+        
+        .scene-btn:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .scene-btn.active {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+        
+        .dialogue-input {
+            width: 100%;
+            height: 60px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+            resize: vertical;
+        }
+        
+        .bubble-types {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4px;
+            margin: 8px 0;
+        }
+        
+        .bubble-btn {
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            background: white;
+            font-size: 10px;
+            transition: all 0.2s ease;
+        }
+        
+        .bubble-btn:hover {
+            border-color: #28a745;
+            background: #f8fff9;
+        }
+        
+        .recommendation-panel {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        
+        .story-timeline {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin: 10px 0;
+            font-size: 10px;
+        }
+        
+        .timeline-step {
+            padding: 4px 8px;
+            background: #e9ecef;
+            border-radius: 12px;
+            font-size: 9px;
+        }
+        
+        .timeline-step.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .page-tabs {
+            display: flex;
+            gap: 2px;
+            margin-bottom: 10px;
+        }
+        
+        .page-tab {
+            padding: 6px 12px;
+            background: #e9ecef;
+            border: none;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        
+        .page-tab.active {
+            background: white;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .guidelines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📚 ネーム制作支援ツール</h1>
+        <p>コマ割り・キャラ配置・セリフを統合した漫画ネーム作成ツール</p>
+    </div>
+    
+    <div class="container">
+        <!-- 左パネル：ストーリー構成 -->
+        <div class="story-panel">
+            <div class="section">
+                <h3>📖 ストーリー構成</h3>
+                <div class="story-timeline">
+                    <div class="timeline-step active">導入</div>
+                    <div class="timeline-step">展開</div>
+                    <div class="timeline-step">転</div>
+                    <div class="timeline-step">結</div>
+                </div>
+                <textarea placeholder="プロット・あらすじを入力..." style="width:100%; height:60px; font-size:11px;"></textarea>
+            </div>
+            
+            <div class="section">
+                <h3>🎭 シーン選択</h3>
+                <div class="scene-buttons">
+                    <div class="scene-btn" onclick="analyzeScene('daily')">🌸 日常シーン</div>
+                    <div class="scene-btn" onclick="analyzeScene('dialogue')">💬 会話シーン</div>
+                    <div class="scene-btn" onclick="analyzeScene('action')">⚡ アクションシーン</div>
+                    <div class="scene-btn" onclick="analyzeScene('emotional')">😢 感情シーン</div>
+                    <div class="scene-btn" onclick="analyzeScene('comedy')">😂 ギャグシーン</div>
+                </div>
+                
+                <div id="sceneRecommendation" class="recommendation-panel" style="display:none;">
+                    <h4 style="font-size:12px; margin-bottom:6px;">📋 推奨レイアウト</h4>
+                    <div id="recommendationContent" style="font-size:10px;"></div>
+                    <button onclick="applyRecommendation()" class="btn btn-primary" style="margin-top:6px; width:100%;">
+                        ✨ 適用
+                    </button>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>📄 ページ管理</h3>
+                <div class="page-tabs">
+                    <button class="page-tab active" onclick="switchPage(1)">P1</button>
+                    <button class="page-tab" onclick="switchPage(2)">P2</button>
+                    <button class="page-tab" onclick="addPage()">+</button>
+                </div>
+                <div style="font-size:10px; color:#666;">
+                    現在: 1ページ目 / 全2ページ
+                </div>
+            </div>
+        </div>
+        
+        <!-- メインキャンバス -->
+        <div class="main-canvas">
+            <div class="canvas-info">
+                <strong>📐 ネームキャンバス:</strong> B5サイズ (350dpi) | 
+                <strong>🎯 選択中:</strong> <span id="selectedInfo">コマを選択してください</span>
+            </div>
+            
+            <div class="canvas-container">
+                <canvas id="nameCanvas" width="600" height="800"></canvas>
+                <div class="character-overlay" id="characterOverlay"></div>
+                <div class="bubble-overlay" id="bubbleOverlay"></div>
+                <canvas class="guidelines" id="guidelines" width="600" height="800"></canvas>
+            </div>
+        </div>
+        
+        <!-- 右パネル：制作ツール -->
+        <div class="tools-panel">
+            <!-- コマ割りテンプレート -->
+            <div class="section">
+                <h3>📚 コマ割りテンプレート</h3>
+                <div class="template-grid">
+                    <div class="template-card active" onclick="loadTemplate('4koma')">4コマ</div>
+                    <div class="template-card" onclick="loadTemplate('dynamic')">ダイナミック</div>
+                    <div class="template-card" onclick="loadTemplate('romance')">恋愛</div>
+                    <div class="template-card" onclick="loadTemplate('action')">アクション</div>
+                    <div class="template-card" onclick="loadTemplate('gag')">ギャグ</div>
+                    <div class="template-card" onclick="loadTemplate('custom')">カスタム</div>
+                </div>
+            </div>
+            
+            <!-- キャラ配置 -->
+            <div class="section">
+                <h3>👥 キャラ配置</h3>
+                <div class="layout-patterns">
+                    <div class="pattern-card" onclick="applyCharacterLayout('single_center')">1人中央</div>
+                    <div class="pattern-card" onclick="applyCharacterLayout('dialogue_two')">会話2人</div>
+                    <div class="pattern-card" onclick="applyCharacterLayout('close_up')">顔アップ</div>
+                    <div class="pattern-card" onclick="applyCharacterLayout('action_dynamic')">アクション</div>
+                </div>
+                
+                <div class="character-list">
+                    <div class="char-item" onclick="addCharacter('hero')">
+                        <div class="char-icon">主</div>
+                        <span>主人公</span>
+                    </div>
+                    <div class="char-item" onclick="addCharacter('heroine')">
+                        <div class="char-icon">ヒ</div>
+                        <span>ヒロイン</span>
+                    </div>
+                    <div class="char-item" onclick="addCharacter('rival')">
+                        <div class="char-icon">敵</div>
+                        <span>ライバル</span>
+                    </div>
+                    <div class="char-item" onclick="addCharacter('friend')">
+                        <div class="char-icon">友</div>
+                        <span>友人</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- セリフ・吹き出し -->
+            <div class="section">
+                <h3>💬 セリフ・吹き出し</h3>
+                <textarea id="dialogueText" class="dialogue-input" placeholder="セリフを入力してください..."></textarea>
+                
+                <div class="bubble-types">
+                    <div class="bubble-btn" onclick="addBubble('normal')">💬 普通</div>
+                    <div class="bubble-btn" onclick="addBubble('shout')">❗ 叫び</div>
+                    <div class="bubble-btn" onclick="addBubble('whisper')">💭 小声</div>
+                    <div class="bubble-btn" onclick="addBubble('thought')">☁️ 心の声</div>
+                    <div class="bubble-btn" onclick="addBubble('narration')">📝 ナレーション</div>
+                    <div class="bubble-btn" onclick="autoPlaceBubbles()">✨ 自動配置</div>
+                </div>
+            </div>
+            
+            <!-- 詳細調整 -->
+            <div class="section">
+                <h3>🎛️ 詳細調整</h3>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>サイズ:</label>
+                        <input type="range" id="elementScale" min="0.3" max="2.0" step="0.1" value="1.0" onchange="updateSelectedElement()">
+                    </div>
+                    <div class="control-group">
+                        <label>横位置:</label>
+                        <input type="range" id="elementX" min="0" max="1" step="0.05" value="0.5" onchange="updateSelectedElement()">
+                    </div>
+                    <div class="control-group">
+                        <label>縦位置:</label>
+                        <input type="range" id="elementY" min="0" max="1" step="0.05" value="0.5" onchange="updateSelectedElement()">
+                    </div>
+                    <div class="control-group">
+                        <label>要素:</label>
+                        <select id="elementType" onchange="updateSelectedElement()">
+                            <option value="character">キャラクター</option>
+                            <option value="bubble">吹き出し</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button onclick="deleteSelected()" class="btn btn-secondary" style="width:100%; margin-top:8px;">
+                    🗑️ 選択要素を削除
+                </button>
+            </div>
+            
+            <!-- 演出指示 -->
+            <div class="section">
+                <h3>🎬 演出指示</h3>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>カメラ:</label>
+                        <select id="cameraWork">
+                            <option value="medium">普通</option>
+                            <option value="close_up">アップ</option>
+                            <option value="wide">引き</option>
+                            <option value="bird_eye">俯瞰</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>効果:</label>
+                        <select id="effectType">
+                            <option value="none">なし</option>
+                            <option value="speed_lines">効果線</option>
+                            <option value="impact">衝撃</option>
+                            <option value="emotion">感情線</option>
+                        </select>
+                    </div>
+                </div>
+                <textarea placeholder="演出メモ..." style="width:100%; height:40px; font-size:10px; margin-top:6px;"></textarea>
+            </div>
+            
+            <!-- 出力 -->
+            <div class="section">
+                <h3>📤 出力</h3>
+                <div class="export-buttons">
+                    <button class="btn btn-primary" onclick="exportToClipStudio()">
+                        🎨 クリスタ用データ
+                    </button>
+                    <button class="btn btn-success" onclick="exportToPDF()">
+                        📄 PDF (ネーム用)
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportToPNG()">
+                        🖼️ PNG画像
+                    </button>
+                    <button class="btn btn-secondary" onclick="saveProject()">
+                        💾 プロジェクト保存
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="status-bar">
+        <div>
+            <span id="mousePos">マウス位置: (0, 0)</span> | 
+            <span id="panelInfo">パネル情報: 未選択</span> |
+            <span id="elementCount">要素数: 0</span>
+        </div>
+        <div>
+            📏 ガイド表示 <input type="checkbox" id="showGuides" checked onchange="toggleGuides()"> |
+            💾 自動保存 <input type="checkbox" id="autoSave" checked>
+        </div>
+    </div>
+
+    <script>
+        // グローバル状態
+        let canvas, ctx, guideCanvas, guideCtx;
+        let panels = [];
+        let characters = [];
+        let speechBubbles = [];
+        let selectedPanel = null;
+        let selectedCharacter = null;
+        let selectedBubble = null;
+        let selectedElement = null;
+        let isDragging = false;
+        let dragOffset = {x: 0, y: 0};
+        let currentPage = 1;
+        let currentScene = 'daily';
+        
+        // テンプレート定義
+        const templates = {
+            '4koma': [
+                {x: 50, y: 50, width: 500, height: 170, id: 1},
+                {x: 50, y: 240, width: 500, height: 170, id: 2},
+                {x: 50, y: 430, width: 500, height: 170, id: 3},
+                {x: 50, y: 620, width: 500, height: 170, id: 4}
+            ],
+            'dynamic': [
+                {x: 50, y: 50, width: 320, height: 300, id: 1},
+                {x: 390, y: 50, width: 160, height: 140, id: 2},
+                {x: 390, y: 210, width: 160, height: 140, id: 3},
+                {x: 50, y: 370, width: 500, height: 380, id: 4}
+            ],
+            'romance': [
+                {x: 50, y: 50, width: 500, height: 200, id: 1},
+                {x: 50, y: 270, width: 240, height: 200, id: 2},
+                {x: 310, y: 270, width: 240, height: 200, id: 3},
+                {x: 50, y: 490, width: 500, height: 260, id: 4}
+            ],
+            'action': [
+                {x: 50, y: 50, width: 200, height: 300, id: 1},
+                {x: 270, y: 50, width: 280, height: 180, id: 2},
+                {x: 270, y: 250, width: 280, height: 120, id: 3},
+                {x: 50, y: 370, width: 500, height: 380, id: 4}
+            ],
+            'gag': [
+                {x: 50, y: 50, width: 500, height: 150, id: 1},
+                {x: 50, y: 220, width: 160, height: 200, id: 2},
+                {x: 230, y: 220, width: 160, height: 200, id: 3},
+                {x: 410, y: 220, width: 140, height: 200, id: 4},
+                {x: 50, y: 440, width: 500, height: 310, id: 5}
+            ]
+        };
+        
+        // キャラクター配置パターン
+        const characterLayouts = {
+            'single_center': [{x: 0.5, y: 0.6, scale: 0.8}],
+            'dialogue_two': [
+                {x: 0.25, y: 0.6, scale: 0.7, flip: false},
+                {x: 0.75, y: 0.6, scale: 0.7, flip: true}
+            ],
+            'close_up': [{x: 0.5, y: 0.4, scale: 1.2}],
+            'action_dynamic': [{x: 0.3, y: 0.7, scale: 0.9, rotation: -15}]
+        };
+        
+        // シーン別推奨設定
+        const sceneRecommendations = {
+            'daily': {
+                template: '4koma',
+                layout: 'single_center',
+                tips: '等間隔で安定感のある日常描写。背景描写スペースを確保。',
+                cameraWork: 'medium'
+            },
+            'dialogue': {
+                template: 'romance',
+                layout: 'dialogue_two',
+                tips: '会話のキャッチボールが見やすい配置。吹き出しスペースを考慮。',
+                cameraWork: 'medium'
+            },
+            'action': {
+                template: 'action',
+                layout: 'action_dynamic',
+                tips: '動きとスピード感を重視。斜めの構図で迫力演出。',
+                cameraWork: 'wide'
+            },
+            'emotional': {
+                template: 'dynamic',
+                layout: 'close_up',
+                tips: '感情表現重視。表情がよく見える大きなコマを使用。',
+                cameraWork: 'close_up'
+            },
+            'comedy': {
+                template: 'gag',
+                layout: 'single_center',
+                tips: 'テンポの良いコマ割り。オチのコマを強調。',
+                cameraWork: 'medium'
+            }
+        };
+        
+        // 初期化
+        window.onload = function() {
+            canvas = document.getElementById('nameCanvas');
+            ctx = canvas.getContext('2d');
+            guideCanvas = document.getElementById('guidelines');
+            guideCtx = guideCanvas.getContext('2d');
+            
+            setupEventListeners();
+            loadTemplate('4koma');
+            updateElementCount();
+            
+            // マウス位置表示
+            canvas.addEventListener('mousemove', function(e) {
+                const rect = canvas.getBoundingClientRect();
+                const x = Math.round(e.clientX - rect.left);
+                const y = Math.round(e.clientY - rect.top);
+                document.getElementById('mousePos').textContent = `マウス位置: (${x}, ${y})`;
+            });
+        };
+        
+        // イベントリスナー設定
+        function setupEventListeners() {
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('click', handleCanvasClick);
+        }
+        
+        // シーン分析
+        function analyzeScene(sceneType) {
+            currentScene = sceneType;
+            
+            // アクティブ状態更新
+            document.querySelectorAll('.scene-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 推奨設定表示
+            const recommendation = sceneRecommendations[sceneType];
+            document.getElementById('sceneRecommendation').style.display = 'block';
+            document.getElementById('recommendationContent').innerHTML = `
+                <div style="margin-bottom:6px;"><strong>推奨テンプレート:</strong> ${recommendation.template}</div>
+                <div style="margin-bottom:6px;"><strong>キャラ配置:</strong> ${recommendation.layout}</div>
+                <div style="margin-bottom:6px;"><strong>カメラワーク:</strong> ${recommendation.cameraWork}</div>
+                <div style="color:#666; font-size:9px;">${recommendation.tips}</div>
+            `;
+        }
+        
+        // 推奨設定適用
+        function applyRecommendation() {
+            const recommendation = sceneRecommendations[currentScene];
+            if (recommendation) {
+                loadTemplate(recommendation.template);
+                setTimeout(() => {
+                    if (selectedPanel) {
+                        applyCharacterLayout(recommendation.layout);
+                    }
+                }, 100);
+                
+                document.getElementById('cameraWork').value = recommendation.cameraWork;
+            }
+        }
+        
+        // テンプレート読み込み
+        function loadTemplate(templateName) {
+            // アクティブ状態更新
+            document.querySelectorAll('.template-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            event.target.closest('.template-card').classList.add('active');
+            
+            if (templates[templateName]) {
+                panels = JSON.parse(JSON.stringify(templates[templateName]));
+                characters = [];
+                speechBubbles = [];
+                clearOverlays();
+                redrawCanvas();
+                drawGuidelines();
+                updateStatus();
+                updateElementCount();
+            }
+        }
+        
+        // キャンバス再描画
+        function redrawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 背景
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // パネル描画
+            panels.forEach(panel => {
+                drawPanel(panel, panel === selectedPanel);
+            });
+        }
+        
+        // パネル描画
+        function drawPanel(panel, isSelected = false) {
+            ctx.strokeStyle = isSelected ? '#ff6600' : '#000000';
+            ctx.lineWidth = isSelected ? 3 : 2;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            
+            // パネル枠
+            ctx.fillRect(panel.x, panel.y, panel.width, panel.height);
+            ctx.strokeRect(panel.x, panel.y, panel.width, panel.height);
+            
+            // パネル番号
+            ctx.fillStyle = isSelected ? '#ff6600' : '#666666';
+            ctx.font = '14px Arial';
+            ctx.fillText(`${panel.id}`, panel.x + 10, panel.y + 25);
+        }
+        
+        // ガイドライン描画
+        function drawGuidelines() {
+            if (!document.getElementById('showGuides').checked) return;
+            
+            guideCtx.clearRect(0, 0, guideCanvas.width, guideCanvas.height);
+            guideCtx.strokeStyle = '#00ff00';
+            guideCtx.lineWidth = 1;
+            guideCtx.setLineDash([2, 2]);
+            
+            panels.forEach(panel => {
+                const thirdX = panel.width / 3;
+                const thirdY = panel.height / 3;
+                
+                // 縦線
+                guideCtx.beginPath();
+                guideCtx.moveTo(panel.x + thirdX, panel.y);
+                guideCtx.lineTo(panel.x + thirdX, panel.y + panel.height);
+                guideCtx.moveTo(panel.x + thirdX * 2, panel.y);
+                guideCtx.lineTo(panel.x + thirdX * 2, panel.y + panel.height);
+                guideCtx.stroke();
+                
+                // 横線
+                guideCtx.beginPath();
+                guideCtx.moveTo(panel.x, panel.y + thirdY);
+                guideCtx.lineTo(panel.x + panel.width, panel.y + thirdY);
+                guideCtx.moveTo(panel.x, panel.y + thirdY * 2);
+                guideCtx.lineTo(panel.x + panel.width, panel.y + thirdY * 2);
+                guideCtx.stroke();
+            });
+            
+            guideCtx.setLineDash([]);
+        }
+        
+        // キャラクター配置パターン適用
+        function applyCharacterLayout(layoutName) {
+            if (!selectedPanel || !characterLayouts[layoutName]) return;
+            
+            // 既存のキャラクターをクリア（選択されたパネルのみ）
+            characters = characters.filter(char => char.panelId !== selectedPanel.id);
+            
+            // 新しいレイアウトを適用
+            const layout = characterLayouts[layoutName];
+            layout.forEach((pos, index) => {
+                const character = {
+                    id: `char_${Date.now()}_${index}`,
+                    panelId: selectedPanel.id,
+                    type: 'placeholder',
+                    name: `キャラ${index + 1}`,
+                    ...pos
+                };
+                characters.push(character);
+            });
+            
+            updateCharacterOverlay();
+            updateStatus();
+            updateElementCount();
+        }
+        
+        // キャラクター追加
+        function addCharacter(type) {
+            if (!selectedPanel) {
+                alert('まずコマを選択してください');
+                return;
+            }
+            
+            const character = {
+                id: `char_${Date.now()}`,
+                panelId: selectedPanel.id,
+                type: type,
+                name: getCharacterName(type),
+                x: 0.5,
+                y: 0.6,
+                scale: 0.8,
+                rotation: 0,
+                flip: false
+            };
+            
+            characters.push(character);
+            updateCharacterOverlay();
+            updateStatus();
+            updateElementCount();
+        }
+        
+        // 吹き出し追加
+        function addBubble(bubbleType) {
+            if (!selectedPanel) {
+                alert('まずコマを選択してください');
+                return;
+            }
+            
+            const dialogueText = document.getElementById('dialogueText').value.trim();
+            if (!dialogueText && bubbleType !== 'narration') {
+                alert('セリフを入力してください');
+                return;
+            }
+            
+            const bubble = {
+                id: `bubble_${Date.now()}`,
+                panelId: selectedPanel.id,
+                type: bubbleType,
+                text: dialogueText || 'テキスト',
+                x: 0.5,
+                y: 0.3,
+                scale: 1.0,
+                width: Math.max(60, dialogueText.length * 8 + 20),
+                height: 40
+            };
+            
+            speechBubbles.push(bubble);
+            updateBubbleOverlay();
+            
+            // テキストエリアをクリア
+            document.getElementById('dialogueText').value = '';
+            updateStatus();
+            updateElementCount();
+        }
+        
+        // 自動吹き出し配置
+        function autoPlaceBubbles() {
+            if (!selectedPanel) {
+                alert('まずコマを選択してください');
+                return;
+            }
+            
+            const panelBubbles = speechBubbles.filter(b => b.panelId === selectedPanel.id);
+            const panelCharacters = characters.filter(c => c.panelId === selectedPanel.id);
+            
+            panelBubbles.forEach((bubble, index) => {
+                if (panelCharacters.length > 0) {
+                    const character = panelCharacters[index % panelCharacters.length];
+                    // キャラクターの上に配置
+                    bubble.x = character.x;
+                    bubble.y = Math.max(0.1, character.y - 0.3);
+                } else {
+                    // キャラクターがいない場合は上部に配置
+                    bubble.x = 0.2 + (index * 0.3);
+                    bubble.y = 0.2;
+                }
+            });
+            
+            updateBubbleOverlay();
+        }
+        
+        // キャラクター名取得
+        function getCharacterName(type) {
+            const names = {
+                'hero': '主人公',
+                'heroine': 'ヒロイン',
+                'rival': 'ライバル',
+                'friend': '友人'
+            };
+            return names[type] || 'キャラクター';
+        }
+        
+        // キャラクターオーバーレイ更新
+        function updateCharacterOverlay() {
+            const overlay = document.getElementById('characterOverlay');
+            overlay.innerHTML = '';
+            
+            characters.forEach(character => {
+                const panel = panels.find(p => p.id === character.panelId);
+                if (!panel) return;
+                
+                const element = document.createElement('div');
+                element.className = 'character-placeholder';
+                element.dataset.charId = character.id;
+                element.textContent = character.name;
+                
+                // 位置とサイズ計算
+                const charX = panel.x + (panel.width * character.x) - 30;
+                const charY = panel.y + (panel.height * character.y) - 20;
+                const charWidth = 60 * character.scale;
+                const charHeight = 40 * character.scale;
+                
+                element.style.left = charX + 'px';
+                element.style.top = charY + 'px';
+                element.style.width = charWidth + 'px';
+                element.style.height = charHeight + 'px';
+                
+                if (character.rotation) {
+                    element.style.transform = `rotate(${character.rotation}deg)`;
+                }
+                
+                if (character.flip) {
+                    element.style.transform += ' scaleX(-1)';
+                }
+                
+                // イベントリスナー
+                element.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectCharacter(character);
+                });
+                
+                overlay.appendChild(element);
+            });
+        }
+        
+        // 吹き出しオーバーレイ更新
+        function updateBubbleOverlay() {
+            const overlay = document.getElementById('bubbleOverlay');
+            overlay.innerHTML = '';
+            
+            speechBubbles.forEach(bubble => {
+                const panel = panels.find(p => p.id === bubble.panelId);
+                if (!panel) return;
+                
+                const element = document.createElement('div');
+                element.className = `speech-bubble ${bubble.type}`;
+                element.dataset.bubbleId = bubble.id;
+                element.textContent = bubble.text;
+                
+                // 位置とサイズ計算
+                const bubbleX = panel.x + (panel.width * bubble.x) - (bubble.width * bubble.scale / 2);
+                const bubbleY = panel.y + (panel.height * bubble.y) - (bubble.height * bubble.scale / 2);
+                
+                element.style.left = bubbleX + 'px';
+                element.style.top = bubbleY + 'px';
+                element.style.width = (bubble.width * bubble.scale) + 'px';
+                element.style.height = (bubble.height * bubble.scale) + 'px';
+                
+                // 吹き出しの尻尾を追加
+                if (bubble.type !== 'narration') {
+                    const tail = document.createElement('div');
+                    tail.className = 'bubble-tail bottom-left';
+                    element.appendChild(tail);
+                }
+                
+                // イベントリスナー
+                element.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectBubble(bubble);
+                });
+                
+                overlay.appendChild(element);
+            });
+        }
+        
+        // キャラクター選択
+        function selectCharacter(character) {
+            selectedCharacter = character;
+            selectedBubble = null;
+            selectedElement = character;
+            
+            // UI更新
+            document.querySelectorAll('.character-placeholder').forEach(el => {
+                el.classList.remove('selected');
+            });
+            document.querySelectorAll('.speech-bubble').forEach(el => {
+                el.classList.remove('selected');
+            });
+            document.querySelector(`[data-char-id="${character.id}"]`).classList.add('selected');
+            
+            // コントロール更新
+            document.getElementById('elementScale').value = character.scale;
+            document.getElementById('elementX').value = character.x;
+            document.getElementById('elementY').value = character.y;
+            document.getElementById('elementType').value = 'character';
+            
+            updateStatus();
+        }
+        
+        // 吹き出し選択
+        function selectBubble(bubble) {
+            selectedBubble = bubble;
+            selectedCharacter = null;
+            selectedElement = bubble;
+            
+            // UI更新
+            document.querySelectorAll('.character-placeholder').forEach(el => {
+                el.classList.remove('selected');
+            });
+            document.querySelectorAll('.speech-bubble').forEach(el => {
+                el.classList.remove('selected');
+            });
+            document.querySelector(`[data-bubble-id="${bubble.id}"]`).classList.add('selected');
+            
+            // コントロール更新
+            document.getElementById('elementScale').value = bubble.scale;
+            document.getElementById('elementX').value = bubble.x;
+            document.getElementById('elementY').value = bubble.y;
+            document.getElementById('elementType').value = 'bubble';
+            
+            updateStatus();
+        }
+        
+        // 選択された要素更新
+        function updateSelectedElement() {
+            if (!selectedElement) return;
+            
+            selectedElement.scale = parseFloat(document.getElementById('elementScale').value);
+            selectedElement.x = parseFloat(document.getElementById('elementX').value);
+            selectedElement.y = parseFloat(document.getElementById('elementY').value);
+            
+            if (selectedCharacter) {
+                updateCharacterOverlay();
+            } else if (selectedBubble) {
+                updateBubbleOverlay();
+            }
+        }
+        
+        // 選択要素削除
+        function deleteSelected() {
+            if (selectedCharacter) {
+                characters = characters.filter(char => char.id !== selectedCharacter.id);
+                selectedCharacter = null;
+                updateCharacterOverlay();
+            } else if (selectedBubble) {
+                speechBubbles = speechBubbles.filter(bubble => bubble.id !== selectedBubble.id);
+                selectedBubble = null;
+                updateBubbleOverlay();
+            }
+            
+            selectedElement = null;
+            updateStatus();
+            updateElementCount();
+        }
+        
+        // マウスイベント処理
+        function handleMouseDown(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const clickedPanel = findPanelAt(x, y);
+            if (clickedPanel) {
+                selectPanel(clickedPanel);
+            }
+        }
+        
+        function handleMouseMove(e) {
+            // 現在はパネルのドラッグ移動は無効化（ネーム制作では不要）
+        }
+        
+        function handleMouseUp(e) {
+            isDragging = false;
+        }
+        
+        function handleCanvasClick(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const clickedPanel = findPanelAt(x, y);
+            if (clickedPanel) {
+                selectPanel(clickedPanel);
+            } else {
+                selectedPanel = null;
+                selectedCharacter = null;
+                selectedBubble = null;
+                selectedElement = null;
+                redrawCanvas();
+                updateStatus();
+            }
+        }
+        
+        // パネル検索
+        function findPanelAt(x, y) {
+            return panels.find(panel => 
+                x >= panel.x && x <= panel.x + panel.width &&
+                y >= panel.y && y <= panel.y + panel.height
+            );
+        }
+        
+        // パネル選択
+        function selectPanel(panel) {
+            selectedPanel = panel;
+            redrawCanvas();
+            drawGuidelines();
+            updateStatus();
+        }
+        
+        // オーバーレイクリア
+        function clearOverlays() {
+            document.getElementById('characterOverlay').innerHTML = '';
+            document.getElementById('bubbleOverlay').innerHTML = '';
+        }
+        
+        // ガイドライン表示切り替え
+        function toggleGuides() {
+            drawGuidelines();
+        }
+        
+        // 要素数更新
+        function updateElementCount() {
+            const totalElements = characters.length + speechBubbles.length;
+            document.getElementById('elementCount').textContent = `要素数: ${totalElements}`;
+        }
+        
+        // ステータス更新
+        function updateStatus() {
+            const selectedInfo = document.getElementById('selectedInfo');
+            const panelInfo = document.getElementById('panelInfo');
+            
+            if (selectedBubble) {
+                selectedInfo.textContent = `吹き出し: ${selectedBubble.text.substring(0, 10)}...`;
+                panelInfo.textContent = `パネル${selectedBubble.panelId} | タイプ: ${selectedBubble.type}`;
+            } else if (selectedCharacter) {
+                selectedInfo.textContent = `キャラクター: ${selectedCharacter.name}`;
+                panelInfo.textContent = `パネル${selectedCharacter.panelId} | サイズ: ${selectedCharacter.scale.toFixed(2)}`;
+            } else if (selectedPanel) {
+                selectedInfo.textContent = `コマ${selectedPanel.id}`;
+                panelInfo.textContent = `位置: (${selectedPanel.x}, ${selectedPanel.y}) | サイズ: ${selectedPanel.width}×${selectedPanel.height}`;
+            } else {
+                selectedInfo.textContent = 'コマを選択してください';
+                panelInfo.textContent = 'パネル情報: 未選択';
+            }
+        }
+        
+        // ページ切り替え
+        function switchPage(pageNum) {
+            currentPage = pageNum;
+            document.querySelectorAll('.page-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // ページデータの保存・読み込み処理（将来実装）
+        }
+        
+        // ページ追加
+        function addPage() {
+            const newPageNum = document.querySelectorAll('.page-tab').length;
+            const newTab = document.createElement('button');
+            newTab.className = 'page-tab';
+            newTab.textContent = `P${newPageNum}`;
+            newTab.onclick = () => switchPage(newPageNum);
+            
+            // + ボタンの前に挿入
+            const addButton = document.querySelector('.page-tab:last-child');
+            addButton.parentNode.insertBefore(newTab, addButton);
+        }
+        
+        // 出力機能
+        function exportToClipStudio() {
+            const projectData = {
+                pages: [{
+                    pageNumber: currentPage,
+                    panels: panels,
+                    characters: characters,
+                    speechBubbles: speechBubbles,
+                    canvas: {
+                        width: canvas.width,
+                        height: canvas.height
+                    },
+                    metadata: {
+                        scene: currentScene,
+                        created: new Date().toISOString()
+                    }
+                }]
+            };
+            
+            console.log('クリスタ用データ:', projectData);
+            
+            const jsonData = JSON.stringify(projectData, null, 2);
+            const blob = new Blob([jsonData], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `name_project_page${currentPage}.json`;
+            a.click();
+            
+            URL.revokeObjectURL(url);
+            alert('クリスタ用プロジェクトデータを出力しました！');
+        }
+        
+        function exportToPDF() {
+            alert('PDF出力機能は開発中です。現在はPNG出力をご利用ください。');
+        }
+        
+        function exportToPNG() {
+            const link = document.createElement('a');
+            link.download = `name_page${currentPage}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+            alert('PNG画像として保存しました！');
+        }
+        
+        function saveProject() {
+            const projectData = {
+                currentPage: currentPage,
+                currentScene: currentScene,
+                pages: [{
+                    panels: panels,
+                    characters: characters,
+                    speechBubbles: speechBubbles
+                }],
+                metadata: {
+                    created: new Date().toISOString(),
+                    version: '1.0'
+                }
+            };
+            
+            localStorage.setItem('nameProject', JSON.stringify(projectData));
+            alert('プロジェクトを保存しました！');
+        }
+        
+        // キーボードショートカット
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey) {
+                switch(e.key) {
+                    case 's':
+                        e.preventDefault();
+                        saveProject();
+                        break;
+                    case 'e':
+                        e.preventDefault();
+                        exportToClipStudio();
+                        break;
+                }
+            }
+            
+            // 選択された要素の削除
+            if (e.key === 'Delete' && selectedElement) {
+                deleteSelected();
+            }
+        });
+        
+        // 初期表示メッセージ
+        setTimeout(() => {
+            alert('🎉 ネーム制作支援ツール\n\n' +
+                  '使い方:\n' +
+                  '1. シーン選択で最適なレイアウトを提案\n' +
+                  '2. コマ割りテンプレートを選択\n' +
+                  '3. コマをクリックして選択\n' +
+                  '4. キャラクターを配置\n' +
+                  '5. セリフを入力して吹き出し追加\n' +
+                  '6. 演出指示を追加\n' +
+                  '7. クリスタ用データで出力\n\n' +
+                  '完全なネーム制作環境をお楽しみください！');
+        }, 1000);
+    </script>
+</body>
+</html>
