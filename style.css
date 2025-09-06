@@ -514,10 +514,19 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    background: #333;
-    color: white;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-top: 1px solid var(--border-color);
     padding: 6px 20px;
     font-size: 11px;
     display: flex;
     justify-content: space-between;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* シーン選択 */
+.scene-buttons {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4px;
 }
