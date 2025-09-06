@@ -217,6 +217,9 @@ function applyRecommendation() {
 
 // テンプレート読み込み
 function loadTemplate(templateName) {
+    console.log('loadTemplate called:', templateName); // デバッグ用
+    console.log('characters before clear:', characters.length); // デバッグ用
+    
     // アクティブ状態更新
     document.querySelectorAll('.template-card').forEach(card => {
         card.classList.remove('active');
@@ -225,13 +228,16 @@ function loadTemplate(templateName) {
     
     if (templates[templateName]) {
         panels = JSON.parse(JSON.stringify(templates[templateName]));
-        characters = [];
-        speechBubbles = [];
+        // キャラクターとセリフをクリア（新しいテンプレート時のみ）
+        // characters = [];  // これを一時的にコメントアウト
+        // speechBubbles = [];  // これを一時的にコメントアウト
         clearOverlays();
         redrawCanvas();
         drawGuidelines();
         updateStatus();
         updateElementCount();
+        
+        console.log('template loaded, characters:', characters.length); // デバッグ用
     }
 }
 
