@@ -380,6 +380,9 @@ function handleMouseUp(e) {
 
 // 要素検索関数
 function findCharacterAt(x, y) {
+    console.log('searching characters at:', x, y); // デバッグ用
+    console.log('total characters:', characters.length); // デバッグ用
+    
     for (let i = characters.length - 1; i >= 0; i--) {
         const character = characters[i];
         const panel = panels.find(p => p.id === character.panelId);
@@ -390,11 +393,15 @@ function findCharacterAt(x, y) {
         const charWidth = 60 * character.scale;
         const charHeight = 40 * character.scale;
         
+        console.log(`character ${i}:`, {charX, charY, charWidth, charHeight}); // デバッグ用
+        
         if (x >= charX && x <= charX + charWidth && 
             y >= charY && y <= charY + charHeight) {
+            console.log('found character:', character); // デバッグ用
             return character;
         }
     }
+    console.log('no character found'); // デバッグ用
     return null;
 }
 
