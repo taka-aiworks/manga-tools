@@ -873,6 +873,18 @@ document.getElementById('themeToggle').onclick = manualToggleTheme;
 
 console.log('Manual dark mode setup complete');
 
+// 初期化
+function initializeApp() {
+    console.log('App initializing...');
+    
+    canvas = document.getElementById('nameCanvas');
+    ctx = canvas.getContext('2d');
+    guideCanvas = document.getElementById('guidelines');
+    guideCtx = guideCanvas.getContext('2d');
+    
+    setupEventListeners();
+    loadTemplate('4koma');
+}
 
 // 初期化実行
 if (document.readyState === 'loading') {
