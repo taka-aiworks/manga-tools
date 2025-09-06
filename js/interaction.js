@@ -6,6 +6,7 @@ function initializeInteraction() {
 }
 
 // ===== イベントリスナー設定 =====
+// setupEventListeners関数を修正
 function setupEventListeners() {
     console.log('📋 イベントリスナー設定中...');
     
@@ -18,7 +19,24 @@ function setupEventListeners() {
     canvas.addEventListener('mousedown', handleMouseDown);
     canvas.addEventListener('mousemove', handleMouseMove);
     canvas.addEventListener('mouseup', handleMouseUp);
-    canvas.addEventListener('click', handleCanvasClick);
+    
+    // ===== 追加：より確実なmouseup処理 =====
+    document.addEventListener('mouseup', function(e) {
+        if (isDragging) {
+            console.log('🖱️ ドキュメントmouseup - ドラッグ強制終了');
+            isDragging = false;
+            selectedElement = null;
+        }
+    });
+    
+    // ===== 追加：キーボードでドラッグ終了 =====
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && isDragging) {
+            console.log('⌨️ ESCキー - ドラッグ強制終了');
+            isDragging = false;
+            selectedElement = null;
+        }
+    });
     
     // テンプレート選択
     document.querySelectorAll('.template-card').forEach(card => {
@@ -106,6 +124,66 @@ function setupEventListeners() {
     
     console.log('✅ イベントリスナー設定完了');
 }
+
+
+function createCharacterElement(character, panel) {
+    const element = document.createElement('div');
+    element.className = 'character-placeholder';
+    element.dataset.charId = character.id;
+    element.textContent = character.name;
+    
+    // 初期位置設定
+    updateCharacterElementPosition(element, character, panel);
+    element.style.cursor = 'move';
+    
+    // ===== イベントリスナー =====
+    element.addEventListener('mousedown', function(e) {
+        console.log('👤 キャラクタークリック:', character.name, 'isDragging:', isDragging);
+        e.stopPropagation();
+        e.preventDefault();
+        
+        // 既にドラッグ中なら強制リセット
+        if (isDragging) {
+            console.log('⚠️ ドラッグ状態強制リセット');
+            isDragging = false;
+            selectedElement = null;
+        }
+        
+        selectCharacter(character);
+        
+        // ドラッグ開始
+        isDragging = true;
+        selectedElement = character;
+        
+        const coords = getCanvasCoordinates(e);
+        dragOffset.x = coords.x - (panel.x + panel.width * character.x);
+        dragOffset.y = coords.y - (panel.y + panel.height * character.y);
+        
+        console.log('🚀 ドラッグ開始');
+        
+        // ===== 追加：タイムアウトでドラッグ強制終了 =====
+        setTimeout(() => {
+            if (isDragging) {
+                console.log('⏰ タイムアウト - ドラッグ強制終了');
+                isDragging = false;
+                selectedElement = null;
+            }
+        }, 5000); // 5秒後に強制終了
+    });
+    
+    // ===== 追加：ダブルクリックでドラッグ強制終了 =====
+    element.addEventListener('dblclick', function(e) {
+        console.log('👤 ダブルクリック - ドラッグ強制終了');
+        e.stopPropagation();
+        isDragging = false;
+        selectedElement = null;
+    });
+    
+    return element;
+}
+
+
+
 
 // ===== マウスイベント処理 =====
 function handleMouseDown(e) {
