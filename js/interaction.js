@@ -109,34 +109,24 @@ function setupEventListeners() {
 
 // ===== マウスイベント処理 =====
 function handleMouseDown(e) {
-    console.log('🖱️ マウスダウン');
-        // キャラクター要素に直接クリックされた場合
+    console.log('🖱️ マウスダウン at:', e.target.className);
+    
+    // キャラクター要素に直接クリックされた場合はスキップ
     if (e.target.classList.contains('character-placeholder')) {
-        console.log('🎯 キャラクター要素に直接クリック');
-        return; // イベントはキャラクター要素側で処理
+        console.log('🎯 キャラクター要素 - キャンバス処理スキップ');
+        return;
     }
     
+    // 吹き出し要素に直接クリックされた場合もスキップ
+    if (e.target.classList.contains('speech-bubble')) {
+        console.log('🎯 吹き出し要素 - キャンバス処理スキップ');
+        return;
+    }
+    
+    // 以下、既存のキャンバス処理...
     const coords = getCanvasCoordinates(e);
     const x = coords.x;
     const y = coords.y;
-    
-    // キャラクターがクリックされたかチェック
-    const clickedCharacter = findCharacterAt(x, y);
-    if (clickedCharacter) {
-        console.log('👤 キャラクター選択:', clickedCharacter.name);
-        selectCharacter(clickedCharacter);
-        startDragging(e, clickedCharacter);
-        return;
-    }
-    
-    // 吹き出しがクリックされたかチェック
-    const clickedBubble = findBubbleAt(x, y);
-    if (clickedBubble) {
-        console.log('💬 吹き出し選択:', clickedBubble.text);
-        selectBubble(clickedBubble);
-        startDragging(e, clickedBubble);
-        return;
-    }
     
     // パネルがクリックされたかチェック
     const clickedPanel = findPanelAt(x, y);
