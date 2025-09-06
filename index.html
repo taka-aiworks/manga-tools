@@ -134,35 +134,85 @@
                 </div>
             </div>
             
-            <!-- 詳細調整 -->
-            <div class="section">
-                <h3>🎛️ 詳細調整</h3>
-                <div class="controls">
-                    <div class="control-group">
-                        <label>サイズ:</label>
-                        <input type="range" id="elementScale" min="0.3" max="2.0" step="0.1" value="1.0">
+            <!-- 詳細調整セクション -->
+                <div class="section">
+                    <h3>🎛️ 詳細調整</h3>
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>サイズ:</label>
+                            <input type="range" id="elementScale" min="0.3" max="2.0" step="0.1" value="1.0">
+                        </div>
+                        <div class="control-group">
+                            <label>横位置:</label>
+                            <input type="range" id="elementX" min="0" max="1" step="0.05" value="0.5">
+                        </div>
+                        <div class="control-group">
+                            <label>縦位置:</label>
+                            <input type="range" id="elementY" min="0" max="1" step="0.05" value="0.5">
+                        </div>
+                        
+                        <!-- 新規追加：キャラクター設定 -->
+                        <div id="characterSettings" style="display:none;">
+                            <hr style="margin: 10px 0; border-color: #ddd;">
+                            <h4 style="font-size: 12px; margin-bottom: 6px;">👤 キャラクター設定</h4>
+                            
+                            <div class="control-group">
+                                <label>向き:</label>
+                                <select id="characterFacing">
+                                    <option value="front">正面</option>
+                                    <option value="left">左向き</option>
+                                    <option value="right">右向き</option>
+                                    <option value="back">後ろ向き</option>
+                                </select>
+                            </div>
+                            
+                            <div class="control-group">
+                                <label>視線:</label>
+                                <select id="characterGaze">
+                                    <option value="center">中央</option>
+                                    <option value="left">左</option>
+                                    <option value="right">右</option>
+                                    <option value="up">上</option>
+                                    <option value="down">下</option>
+                                </select>
+                            </div>
+                            
+                            <div class="control-group">
+                                <label>ポーズ:</label>
+                                <select id="characterPose">
+                                    <option value="standing">立ち</option>
+                                    <option value="sitting">座り</option>
+                                    <option value="walking">歩き</option>
+                                    <option value="running">走り</option>
+                                    <option value="pointing">指差し</option>
+                                </select>
+                            </div>
+                            
+                            <div class="control-group">
+                                <label>表情:</label>
+                                <select id="characterExpression">
+                                    <option value="neutral">普通</option>
+                                    <option value="happy">笑顔</option>
+                                    <option value="sad">悲しい</option>
+                                    <option value="angry">怒り</option>
+                                    <option value="surprised">驚き</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>要素:</label>
+                            <select id="elementType">
+                                <option value="character">キャラクター</option>
+                                <option value="bubble">吹き出し</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="control-group">
-                        <label>横位置:</label>
-                        <input type="range" id="elementX" min="0" max="1" step="0.05" value="0.5">
-                    </div>
-                    <div class="control-group">
-                        <label>縦位置:</label>
-                        <input type="range" id="elementY" min="0" max="1" step="0.05" value="0.5">
-                    </div>
-                    <div class="control-group">
-                        <label>要素:</label>
-                        <select id="elementType">
-                            <option value="character">キャラクター</option>
-                            <option value="bubble">吹き出し</option>
-                        </select>
-                    </div>
+                    
+                    <button id="deleteSelected" class="btn btn-secondary full-width">
+                        🗑️ 選択要素を削除
+                    </button>
                 </div>
-                
-                <button id="deleteSelected" class="btn btn-secondary full-width">
-                    🗑️ 選択要素を削除
-                </button>
-            </div>
             
             <!-- 演出指示 -->
             <div class="section">
