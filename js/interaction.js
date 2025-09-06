@@ -169,6 +169,7 @@ function handleMouseUp(e) {
     if (isDragging) {
         console.log('🖱️ ドラッグ終了');
         isDragging = false;
+        selectedElement = null; // 追加
     }
 }
 
