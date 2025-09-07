@@ -1524,3 +1524,272 @@ body.bubble-editing .bubble-edit-area {
 html[data-theme="dark"] .speech-bubble.selected::before {
     background: #ff8833;
 }
+
+
+/* ===== パネル編集用CSS（style.cssに追加） ===== */
+
+/* パネル右クリックメニュー */
+.panel-context-menu {
+    position: fixed;
+    background: white;
+    border: 2px solid #667eea;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 9999;
+    min-width: 180px;
+    font-size: 12px;
+    overflow: hidden;
+    animation: contextMenuFadeIn 0.2s ease;
+}
+
+@keyframes contextMenuFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.panel-context-menu .menu-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    transition: background 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.panel-context-menu .menu-item:last-child {
+    border-bottom: none;
+}
+
+.panel-context-menu .menu-item:hover {
+    background: #f0f4ff;
+}
+
+.panel-context-menu .menu-item.delete-item:hover {
+    background: #ffebee;
+    color: #d32f2f;
+}
+
+/* パネルリサイズハンドル */
+.panel-resize-handle {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: #667eea;
+    border: 3px solid white;
+    border-radius: 4px;
+    cursor: se-resize;
+    z-index: 1001;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+    transition: all 0.2s ease;
+}
+
+.panel-resize-handle:hover {
+    background: #5a6fd8;
+    transform: scale(1.2);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+.panel-resize-handle:active {
+    transform: scale(1.1);
+    background: #4a5bc6;
+}
+
+/* パネル選択状態の強化 */
+#nameCanvas {
+    cursor: crosshair;
+}
+
+/* パネル分割プレビュー（将来実装用） */
+.panel-split-preview {
+    position: absolute;
+    border: 2px dashed #ff6600;
+    background: rgba(255, 102, 0, 0.1);
+    pointer-events: none;
+    z-index: 999;
+    animation: splitPreviewPulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes splitPreviewPulse {
+    from { opacity: 0.3; }
+    to { opacity: 0.7; }
+}
+
+/* 通知スタイル */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    z-index: 10000;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    max-width: 300px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.notification.show {
+    transform: translateX(0);
+}
+
+.notification-success {
+    background: linear-gradient(45deg, #28a745, #20c997);
+}
+
+.notification-info {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+}
+
+.notification-warning {
+    background: linear-gradient(45deg, #ffc107, #ff8f00);
+}
+
+.notification-error {
+    background: linear-gradient(45deg, #dc3545, #c82333);
+}
+
+/* パネル操作時のカーソル変更 */
+.panel-drag-mode {
+    cursor: move !important;
+}
+
+.panel-resize-mode {
+    cursor: se-resize !important;
+}
+
+/* ダークモード対応 */
+html[data-theme="dark"] .panel-context-menu {
+    background: #2d2d2d;
+    border-color: #667eea;
+    color: #e0e0e0;
+}
+
+html[data-theme="dark"] .panel-context-menu .menu-item {
+    border-color: #444;
+}
+
+html[data-theme="dark"] .panel-context-menu .menu-item:hover {
+    background: #363636;
+}
+
+html[data-theme="dark"] .panel-context-menu .menu-item.delete-item:hover {
+    background: #4a2c2c;
+    color: #ff6b6b;
+}
+
+html[data-theme="dark"] .panel-resize-handle {
+    background: #667eea;
+    border-color: #2d2d2d;
+}
+
+html[data-theme="dark"] .panel-resize-handle:hover {
+    background: #7888ea;
+}
+
+/* キーボードショートカット表示 */
+.keyboard-hint {
+    position: fixed;
+    bottom: 80px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.keyboard-hint.show {
+    opacity: 1;
+}
+
+/* パネル番号の強化表示 */
+.panel-selected {
+    position: relative;
+}
+
+.panel-selected::after {
+    content: "選択中";
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ff6600;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+/* アニメーション効果 */
+@keyframes panelHighlight {
+    0% { box-shadow: 0 0 0 0 rgba(255, 102, 0, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 102, 0, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 102, 0, 0); }
+}
+
+.panel-action-highlight {
+    animation: panelHighlight 0.6s ease-out;
+}
+
+/* パネル編集モード表示 */
+.panel-edit-active {
+    cursor: crosshair !important;
+}
+
+.panel-edit-active .speech-bubble,
+.panel-edit-active .character-placeholder {
+    pointer-events: none !important;
+    opacity: 0.7 !important;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .panel-context-menu {
+        min-width: 160px;
+        font-size: 11px;
+    }
+    
+    .panel-context-menu .menu-item {
+        padding: 10px 12px;
+    }
+    
+    .panel-resize-handle {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+        font-size: 12px;
+    }
+}
+
+/* アクセシビリティ改善 */
+.panel-context-menu .menu-item:focus {
+    outline: 2px solid #667eea;
+    outline-offset: -2px;
+}
+
+.panel-resize-handle:focus {
+    outline: 3px solid #667eea;
+    outline-offset: 2px;
+}
