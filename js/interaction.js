@@ -727,15 +727,15 @@ document.addEventListener('keydown', function(e) {
 
 
 
-// ===== インタラクションモジュール =====
+// ===== interaction.js - 関数名統一修正 =====
 
+// 🔧 既存のinitializeInteraction関数を正しい名前に変更
 function initializeInteraction() {
     console.log('🖱️ インタラクションモジュール初期化');
     setupEventListeners();
 }
 
-// ===== イベントリスナー設定 =====
-// setupEventListeners関数を修正
+// 🔧 setupEventListeners関数が存在することを確認
 function setupEventListeners() {
     console.log('📋 イベントリスナー設定中...');
     
@@ -770,31 +770,53 @@ function setupEventListeners() {
     // テンプレート選択
     document.querySelectorAll('.template-card').forEach(card => {
         card.addEventListener('click', function() {
-            loadTemplate(this.dataset.template);
+            if (typeof loadTemplate === 'function') {
+                loadTemplate(this.dataset.template);
+            } else {
+                console.error('❌ loadTemplate関数が見つかりません');
+            }
         });
     });
     
     // キャラ配置パターン
     document.querySelectorAll('.pattern-card').forEach(card => {
         card.addEventListener('click', function() {
-            applyCharacterLayout(this.dataset.layout);
+            if (typeof applyCharacterLayout === 'function') {
+                applyCharacterLayout(this.dataset.layout);
+            } else {
+                console.error('❌ applyCharacterLayout関数が見つかりません');
+            }
         });
     });
     
     // キャラクター追加
     document.querySelectorAll('.char-item').forEach(item => {
         item.addEventListener('click', function() {
-            addCharacter(this.dataset.char);
+            if (typeof addCharacter === 'function') {
+                addCharacter(this.dataset.char);
+            } else {
+                console.error('❌ addCharacter関数が見つかりません');
+            }
         });
     });
     
     // 吹き出し追加
     document.querySelectorAll('.bubble-btn').forEach(btn => {
         if (btn.id === 'autoPlaceBubbles') {
-            btn.addEventListener('click', autoPlaceBubbles);
+            btn.addEventListener('click', function() {
+                if (typeof autoPlaceBubbles === 'function') {
+                    autoPlaceBubbles();
+                } else {
+                    console.error('❌ autoPlaceBubbles関数が見つかりません');
+                }
+            });
         } else if (btn.dataset.bubble) {
             btn.addEventListener('click', function() {
-                addBubble(this.dataset.bubble);
+                if (typeof addBubble === 'function') {
+                    addBubble(this.dataset.bubble);
+                } else {
+                    console.error('❌ addBubble関数が見つかりません');
+                }
             });
         }
     });
@@ -802,14 +824,24 @@ function setupEventListeners() {
     // シーン選択
     document.querySelectorAll('.scene-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            analyzeScene(this.dataset.scene);
+            if (typeof analyzeScene === 'function') {
+                analyzeScene(this.dataset.scene);
+            } else {
+                console.error('❌ analyzeScene関数が見つかりません');
+            }
         });
     });
     
     // 推奨設定適用
     const applyBtn = document.getElementById('applyRecommendation');
     if (applyBtn) {
-        applyBtn.addEventListener('click', applyRecommendation);
+        applyBtn.addEventListener('click', function() {
+            if (typeof applyRecommendation === 'function') {
+                applyRecommendation();
+            } else {
+                console.error('❌ applyRecommendation関数が見つかりません');
+            }
+        });
     }
     
     // 詳細調整
@@ -830,7 +862,13 @@ function setupEventListeners() {
     // ガイド表示切り替え
     const showGuides = document.getElementById('showGuides');
     if (showGuides) {
-        showGuides.addEventListener('change', toggleGuides);
+        showGuides.addEventListener('change', function() {
+            if (typeof toggleGuides === 'function') {
+                toggleGuides();
+            } else {
+                console.error('❌ toggleGuides関数が見つかりません');
+            }
+        });
     }
     
     // 出力機能
@@ -843,16 +881,51 @@ function setupEventListeners() {
     
     Object.entries(exportBtns).forEach(([id, handler]) => {
         const btn = document.getElementById(id);
-        if (btn) {
+        if (btn && typeof handler === 'function') {
             btn.addEventListener('click', handler);
+        } else if (btn) {
+            console.warn(`⚠️ ${id}のハンドラー関数が見つかりません`);
         }
     });
     
     // キーボードショートカット
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keydown', function(e) {
+        if (typeof handleKeyDown === 'function') {
+            handleKeyDown(e);
+        } else {
+            console.error('❌ handleKeyDown関数が見つかりません');
+        }
+    });
     
     console.log('✅ イベントリスナー設定完了');
 }
+
+// 🆕 関数存在チェック用のヘルパー
+function checkFunction(funcName, context = 'setupEventListeners') {
+    if (typeof window[funcName] !== 'function') {
+        console.warn(`⚠️ ${context}: ${funcName}関数が見つかりません`);
+        return false;
+    }
+    return true;
+}
+
+// 🆕 安全な関数呼び出し
+function safeCall(funcName, ...args) {
+    if (typeof window[funcName] === 'function') {
+        try {
+            return window[funcName](...args);
+        } catch (error) {
+            console.error(`❌ ${funcName}実行エラー:`, error);
+        }
+    } else {
+        console.warn(`⚠️ ${funcName}関数が存在しません`);
+    }
+}
+
+// 🔧 互換性を保つためのエイリアス
+window.initializeInteraction = initializeInteraction;
+window.setupEventListeners = setupEventListeners;
+
 
 
 function createCharacterElement(character, panel) {
