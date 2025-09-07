@@ -446,3 +446,297 @@ window.addEventListener('load', function() {
         initializeApp();
     }
 });
+
+
+// ===== UI初期化・イベント設定 - main.jsに追加 =====
+
+// 🆕 UI要素の初期化（initializeApp関数に追加）
+function initializeUIControls() {
+    console.log('🎛️ UIコントロール初期化');
+    
+    // Undo/Redoボタンのイベント設定
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    const helpBtn = document.getElementById('helpBtn');
+    
+    if (undoBtn) {
+        undoBtn.addEventListener('click', () => {
+            undo();
+            console.log('🖱️ Undoボタンクリック');
+        });
+    }
+    
+    if (redoBtn) {
+        redoBtn.addEventListener('click', () => {
+            redo();
+            console.log('🖱️ Redoボタンクリック');
+        });
+    }
+    
+    if (helpBtn) {
+        helpBtn.addEventListener('click', () => {
+            showKeyboardHelp();
+            console.log('🖱️ ヘルプボタンクリック');
+        });
+    }
+    
+    // 初期状態の更新
+    updateUndoRedoButtons();
+    updateOperationStatus('準備完了');
+    updateHistoryStatus();
+    updateSelectionStatus('何も選択されていません');
+    
+    console.log('✅ UIコントロール初期化完了');
+}
+
+// 🆕 操作状況の更新
+function updateOperationStatus(message, type = 'success') {
+    const statusElement = document.getElementById('operationStatus');
+    if (statusElement) {
+        statusElement.textContent = message;
+        statusElement.className = `status-${type}`;
+        
+        // アニメーション効果
+        statusElement.classList.add('status-update');
+        setTimeout(() => {
+            statusElement.classList.remove('status-update');
+        }, 300);
+    }
+}
+
+// 🆕 履歴状況の更新
+function updateHistoryStatus() {
+    const historyElement = document.getElementById('historyStatus');
+    if (historyElement) {
+        const currentPos = currentHistoryIndex + 1;
+        const totalOps = operationHistory.length;
+        historyElement.textContent = `履歴: ${currentPos}/${totalOps}`;
+    }
+}
+
+// 🆕 選択状況の更新
+function updateSelectionStatus(message) {
+    const selectionElement = document.getElementById('selectionStatus');
+    if (selectionElement) {
+        selectionElement.textContent = message;
+    }
+}
+
+// 🔄 既存関数の拡張 - 操作時の状況更新
+function enhancedSplitPanel(panel, direction) {
+    updateOperationStatus('パネル分割中...', 'info');
+    
+    splitPanel(panel, direction);
+    
+    updateOperationStatus(`パネル${panel.id}を${direction === 'horizontal' ? '横' : '縦'}に分割しました`);
+    updateHistoryStatus();
+}
+
+function enhancedDeletePanel(panel) {
+    updateOperationStatus('パネル削除中...', 'warning');
+    
+    deletePanel(panel);
+    
+    updateOperationStatus(`パネル${panel.id}を削除しました`);
+    updateHistoryStatus();
+    updateSelectionStatus('何も選択されていません');
+}
+
+function enhancedDuplicatePanel(panel) {
+    updateOperationStatus('パネル複製中...', 'info');
+    
+    duplicatePanel(panel);
+    
+    updateOperationStatus(`パネル${panel.id}を複製しました`);
+    updateHistoryStatus();
+}
+
+function enhancedRotatePanel(panel) {
+    updateOperationStatus('パネル回転中...', 'info');
+    
+    rotatePanel(panel);
+    
+    updateOperationStatus(`パネル${panel.id}を90度回転しました`);
+    updateHistoryStatus();
+}
+
+// 🔄 選択処理の拡張
+function enhancedSelectPanel(panel) {
+    selectedPanel = panel;
+    selectedCharacter = null;
+    selectedBubble = null;
+    selectedElement = null;
+    
+    redrawCanvas();
+    drawGuidelines();
+    updateStatus();
+    
+    updateSelectionStatus(`パネル${panel.id}を選択中`);
+    updateOperationStatus('パネルが選択されました');
+}
+
+function enhancedSelectCharacter(character) {
+    selectedCharacter = character;
+    selectedBubble = null;
+    selectedPanel = null;
+    selectedElement = character;
+    
+    updateCharacterOverlay();
+    updateControlsFromElement();
+    updateStatus();
+    
+    updateSelectionStatus(`キャラクター「${character.name}」を選択中`);
+    updateOperationStatus('キャラクターが選択されました');
+}
+
+function enhancedSelectBubble(bubble) {
+    selectedBubble = bubble;
+    selectedCharacter = null;
+    selectedPanel = null;
+    selectedElement = bubble;
+    
+    updateBubbleOverlay();
+    updateControlsFromElement();
+    updateStatus();
+    
+    const shortText = bubble.text.length > 20 ? 
+        bubble.text.substring(0, 20) + '...' : 
+        bubble.text;
+    updateSelectionStatus(`吹き出し「${shortText}」を選択中`);
+    updateOperationStatus('吹き出しが選択されました');
+}
+
+function enhancedClearSelection() {
+    selectedPanel = null;
+    selectedCharacter = null;
+    selectedBubble = null;
+    selectedElement = null;
+    
+    redrawCanvas();
+    drawGuidelines();
+    updateCharacterOverlay();
+    updateBubbleOverlay();
+    updateStatus();
+    
+    updateSelectionStatus('何も選択されていません');
+    updateOperationStatus('選択を解除しました');
+}
+
+// 🆕 Undo/Redo時の状況更新
+function enhancedUndo() {
+    if (currentHistoryIndex < 0) {
+        updateOperationStatus('元に戻す操作がありません', 'warning');
+        return;
+    }
+    
+    const operation = operationHistory[currentHistoryIndex];
+    undo();
+    
+    updateOperationStatus(`${operation.type}を元に戻しました`);
+    updateHistoryStatus();
+}
+
+function enhancedRedo() {
+    if (currentHistoryIndex >= operationHistory.length - 1) {
+        updateOperationStatus('やり直す操作がありません', 'warning');
+        return;
+    }
+    
+    const operation = operationHistory[currentHistoryIndex + 1];
+    redo();
+    
+    updateOperationStatus(`${operation.type}をやり直しました`);
+    updateHistoryStatus();
+}
+
+// 🆕 吹き出し編集開始時の状況更新
+function enhancedStartBubbleEdit(element, bubble) {
+    updateOperationStatus('吹き出し編集モード', 'info');
+    updateSelectionStatus(`編集中: 「${bubble.text}」`);
+    
+    startBubbleEdit(element, bubble);
+}
+
+// 🆕 プロジェクト保存時の状況更新
+function enhancedSaveProject() {
+    updateOperationStatus('保存中...', 'info');
+    
+    saveProject();
+    
+    updateOperationStatus('プロジェクトを保存しました');
+}
+
+// 🆕 テンプレート読み込み時の状況更新
+function enhancedLoadTemplate(templateName) {
+    updateOperationStatus(`テンプレート「${templateName}」読み込み中...`, 'info');
+    
+    loadTemplate(templateName);
+    
+    updateOperationStatus(`テンプレート「${templateName}」を適用しました`);
+    updateSelectionStatus('何も選択されていません');
+}
+
+// 🆕 エラー処理の強化
+function handleError(message, error) {
+    console.error('❌', message, error);
+    updateOperationStatus(`エラー: ${message}`, 'error');
+    
+    // エラー通知
+    showNotification(`エラーが発生しました: ${message}`, 'error', 4000);
+}
+
+// 🆕 デバッグ情報表示
+function showDebugInfo() {
+    const debugInfo = {
+        panels: panels.length,
+        characters: characters.length,
+        speechBubbles: speechBubbles.length,
+        selectedPanel: selectedPanel?.id || 'なし',
+        selectedCharacter: selectedCharacter?.name || 'なし',
+        selectedBubble: selectedBubble?.text?.substring(0, 20) || 'なし',
+        historyLength: operationHistory.length,
+        currentIndex: currentHistoryIndex
+    };
+    
+    console.table(debugInfo);
+    updateOperationStatus('デバッグ情報をコンソールに出力しました', 'info');
+}
+
+// 🆕 パフォーマンス監視
+function startPerformanceMonitoring() {
+    setInterval(() => {
+        const memoryInfo = performance.memory;
+        if (memoryInfo) {
+            const usedMB = (memoryInfo.usedJSHeapSize / 1024 / 1024).toFixed(1);
+            
+            // メモリ使用量が100MBを超えた場合の警告
+            if (usedMB > 100) {
+                console.warn(`⚠️ メモリ使用量が高くなっています: ${usedMB}MB`);
+                updateOperationStatus(`メモリ使用量: ${usedMB}MB`, 'warning');
+            }
+        }
+    }, 30000); // 30秒ごとにチェック
+}
+
+// 🆕 既存関数をラップして機能強化
+function wrapExistingFunctions() {
+    // 元の関数を保存
+    const originalSelectPanel = selectPanel;
+    const originalSelectCharacter = selectCharacter;
+    const originalSelectBubble = selectBubble;
+    const originalClearSelection = clearSelection;
+    const originalUndo = undo;
+    const originalRedo = redo;
+    
+    // 拡張版に置き換え
+    selectPanel = enhancedSelectPanel;
+    selectCharacter = enhancedSelectCharacter;
+    selectBubble = enhancedSelectBubble;
+    clearSelection = enhancedClearSelection;
+    undo = enhancedUndo;
+    redo = enhancedRedo;
+    
+    console.log('🔄 既存関数を機能強化版にラップしました');
+}
+
+console.log('✅ UI初期化・イベント設定 読み込み完了');
