@@ -1,6 +1,6 @@
 // ===== コンテンツ管理モジュール =====
 
-// ===== キャラクター管理 =====
+// content.js の addCharacter 関数も履歴対応
 function addCharacter(type) {
     if (!selectedPanel) {
         showNotification('まずコマを選択してください', 'warning', 2000);
@@ -24,6 +24,13 @@ function addCharacter(type) {
     };
     
     characters.push(character);
+    
+    // 履歴に追加
+    addToHistory({
+        type: 'addCharacter',
+        character: JSON.parse(JSON.stringify(character))
+    });
+    
     updateCharacterOverlay();
     updateStatus();
     updateElementCount();
@@ -31,6 +38,7 @@ function addCharacter(type) {
     console.log('👤 キャラクター追加:', character.name, 'in panel', selectedPanel.id);
     showNotification(`${character.name}を追加しました`, 'success', 2000);
 }
+
 
 function getCharacterName(type) {
     const names = {
@@ -400,6 +408,7 @@ function startCharacterResize(character, cornerType, e) {
 }
 
 // ===== 吹き出し管理 =====
+// content.js の addBubble 関数も履歴対応
 function addBubble(bubbleType) {
     if (!selectedPanel) {
         showNotification('まずコマを選択してください', 'warning', 2000);
@@ -427,6 +436,13 @@ function addBubble(bubbleType) {
     };
     
     speechBubbles.push(bubble);
+    
+    // 履歴に追加
+    addToHistory({
+        type: 'addBubble',
+        bubble: JSON.parse(JSON.stringify(bubble))
+    });
+    
     updateBubbleOverlay();
     updateStatus();
     updateElementCount();
@@ -440,6 +456,7 @@ function addBubble(bubbleType) {
     console.log('💬 吹き出し追加:', bubbleType, bubble.text, '縦書き:', bubble.vertical);
     showNotification('吹き出しを追加しました', 'success', 2000);
 }
+
 
 function autoPlaceBubbles() {
     if (!selectedPanel) {
