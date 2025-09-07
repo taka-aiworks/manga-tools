@@ -310,6 +310,9 @@ function updateBubbleOverlay() {
     });
 }
 
+// ===== content.jsのcreateBubbleElement関数を以下に置き換えてください =====
+
+// 🔄 置き換え：createBubbleElement関数（ドラッグ機能付き）
 function createBubbleElement(bubble, panel) {
     const element = document.createElement('div');
     element.className = `speech-bubble ${bubble.type}`;
@@ -333,6 +336,9 @@ function createBubbleElement(bubble, panel) {
         height: (bubble.height * bubble.scale) + 'px',
         cursor: 'move'
     });
+    
+    // ===== ドラッグ機能を追加 =====
+    addBubbleDragEvents(element, bubble, panel);
     
     // 吹き出しの尻尾を追加
     if (bubble.type !== 'narration') {
