@@ -573,31 +573,165 @@ function createBubbleElement(bubble, panel) {
     return element;
 }
 
-// 🆕 吹き出し編集イベント追加
+// ===== ダブルクリック編集修正版 - addBubbleEditEvents関数を置き換え =====
+
 function addBubbleEditEvents(element, bubble, panel) {
-    // ダブルクリックで編集モード
-    element.addEventListener('dblclick', function(e) {
-        e.stopPropagation();
-        e.preventDefault();
+    let clickTimeout = null;
+    let clickCount = 0;
+    let lastClickTime = 0;
+    
+    // シングルクリック・ダブルクリックの判定を改良
+    element.addEventListener('mousedown', function(e) {
+        // 右クリックの場合は即座に編集
+        if (e.button === 2) { // 右クリック
+            e.stopPropagation();
+            e.preventDefault();
+            
+            console.log('📝 右クリック編集:', bubble.text);
+            
+            // ドラッグ状態を強制終了
+            isDragging = false;
+            selectedElement = null;
+            
+            startBubbleEdit(element, bubble);
+            return;
+        }
         
-        console.log('✏️ 吹き出し編集開始:', bubble.text);
-        
-        // ドラッグ状態を強制終了
-        isDragging = false;
-        selectedElement = null;
-        
-        startBubbleEdit(element, bubble);
+        // 左クリックの場合はダブルクリック判定
+        if (e.button === 0) { // 左クリック
+            const currentTime = Date.now();
+            clickCount++;
+            
+            console.log(`🖱️ クリック${clickCount}回目:`, bubble.text.substring(0, 10));
+            
+            // ダブルクリック判定（400ms以内の2回目のクリック）
+            if (clickCount === 2 && (currentTime - lastClickTime) < 400) {
+                console.log('🖱️ ダブルクリック検出！');
+                
+                // タイムアウトをクリア
+                if (clickTimeout) {
+                    clearTimeout(clickTimeout);
+                    clickTimeout = null;
+                }
+                
+                // ドラッグを防止
+                e.stopPropagation();
+                e.preventDefault();
+                
+                // ドラッグ状態を強制終了
+                isDragging = false;
+                selectedElement = null;
+                
+                // 編集開始
+                startBubbleEdit(element, bubble);
+                
+                // クリックカウントリセット
+                clickCount = 0;
+                return;
+            }
+            
+            // シングルクリックの処理（遅延実行）
+            if (clickCount === 1) {
+                lastClickTime = currentTime;
+                
+                clickTimeout = setTimeout(() => {
+                    if (clickCount === 1) {
+                        console.log('🖱️ シングルクリック確定 - ドラッグ開始');
+                        
+                        // 通常のドラッグ処理を実行
+                        selectBubble(bubble);
+                        
+                        isDragging = true;
+                        selectedElement = bubble;
+                        
+                        const coords = getCanvasCoordinates(e);
+                        dragOffset.x = coords.x - (panel.x + panel.width * bubble.x);
+                        dragOffset.y = coords.y - (panel.y + panel.height * bubble.y);
+                    }
+                    
+                    // リセット
+                    clickCount = 0;
+                    clickTimeout = null;
+                }, 200); // 200ms待機
+            }
+        }
     });
     
-    // 右クリックでも編集可能
+    // 右クリックメニューを無効化（編集機能を使うため）
     element.addEventListener('contextmenu', function(e) {
         e.preventDefault();
         e.stopPropagation();
         
-        console.log('📝 右クリック編集:', bubble.text);
-        startBubbleEdit(element, bubble);
+        console.log('📝 右クリックメニュー無効化 - 編集機能使用');
+        
+        // 既に編集が開始されていない場合のみ実行
+        if (!document.querySelector('.bubble-edit-area')) {
+            startBubbleEdit(element, bubble);
+        }
+    });
+    
+    // マウスムーブ時にクリックカウントをリセット（ドラッグ判定）
+    element.addEventListener('mousemove', function(e) {
+        if (clickCount > 0 && (isDragging || Math.abs(e.movementX) > 3 || Math.abs(e.movementY) > 3)) {
+            console.log('🖱️ ドラッグ検出 - ダブルクリック判定リセット');
+            clickCount = 0;
+            if (clickTimeout) {
+                clearTimeout(clickTimeout);
+                clickTimeout = null;
+            }
+        }
+    });
+    
+    // マウスリーブ時にリセット
+    element.addEventListener('mouseleave', function() {
+        setTimeout(() => {
+            clickCount = 0;
+            if (clickTimeout) {
+                clearTimeout(clickTimeout);
+                clickTimeout = null;
+            }
+        }, 100);
     });
 }
+
+
+// 🔄 addBubbleDragEvents関数を簡素化（重複を避けるため）
+function addBubbleDragEvents(element, bubble, panel) {
+    // この関数は現在addBubbleEditEventsに統合されているため、
+    // 空の関数にするか、削除してください
+    console.log('💬 ドラッグイベントはaddBubbleEditEventsに統合済み');
+}
+
+// 🆕 強制的にダブルクリック編集を実行する関数（デバッグ用）
+window.forceEditBubble = function(bubbleId) {
+    const bubble = speechBubbles.find(b => b.id === bubbleId);
+    const element = document.querySelector(`[data-bubble-id="${bubbleId}"]`);
+    
+    if (bubble && element) {
+        console.log('🔧 強制編集実行:', bubble.text);
+        startBubbleEdit(element, bubble);
+    } else {
+        console.error('❌ 吹き出しまたは要素が見つかりません');
+    }
+};
+
+// 🆕 全ての吹き出しにダブルクリック表示を追加
+window.showAllBubbleIds = function() {
+    speechBubbles.forEach(bubble => {
+        console.log(`💬 ID: ${bubble.id}, テキスト: "${bubble.text}"`);
+    });
+    
+    // 要素にIDを一時表示
+    document.querySelectorAll('.speech-bubble').forEach(el => {
+        const bubbleId = el.dataset.bubbleId;
+        el.title = `ID: ${bubbleId} - ダブルクリックで編集`;
+    });
+};
+
+console.log('✅ ダブルクリック編集修正版 適用完了');
+console.log('🔧 デバッグ: window.forceEditBubble("bubble_id") で強制編集');
+console.log('🔧 デバッグ: window.showAllBubbleIds() でID一覧表示');
+
 
 // 🆕 吹き出し編集開始
 function startBubbleEdit(element, bubble) {
