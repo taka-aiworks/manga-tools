@@ -164,6 +164,29 @@ function createCharacterElement(character, panel) {
     return element;
 }
 
+// リサイズハンドル追加関数
+function addResizeHandles(element, character) {
+    const handles = [
+        'top-left', 'top-right', 'bottom-left', 'bottom-right',
+        'top', 'bottom', 'left', 'right'
+    ];
+    
+    handles.forEach(position => {
+        const handle = document.createElement('div');
+        handle.className = `resize-handle ${position}`;
+        handle.dataset.position = position;
+        
+        // リサイズイベント
+        handle.addEventListener('mousedown', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            startResize(e, character, position);
+        });
+        
+        element.appendChild(handle);
+    });
+}
+
 // キャラクター移動イベント（分離）
 function addCharacterMoveEvents(element, character, panel) {
     let clickCount = 0;
@@ -204,7 +227,6 @@ function addCharacterMoveEvents(element, character, panel) {
         console.log('🚀 ドラッグ開始');
     });
 }
-
 
 // ===== 吹き出し管理 =====
 function addBubble(bubbleType) {
