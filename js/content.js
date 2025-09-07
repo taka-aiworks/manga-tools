@@ -428,13 +428,20 @@ function updateBubbleOverlay() {
     });
 }
 
+// content.js の createBubbleElement 関数を以下に置き換えてください
+
 function createBubbleElement(bubble, panel) {
     const element = document.createElement('div');
     element.className = `speech-bubble ${bubble.type}`;
     
-    // 縦書き対応
+    // 縦書き対応（デバッグ付き）
+    console.log('🔍 吹き出し作成:', bubble.text, '縦書き設定:', bubble.vertical);
+    
     if (bubble.vertical) {
         element.classList.add('vertical-text');
+        console.log('✅ vertical-textクラス追加:', element.className);
+    } else {
+        console.log('📝 横書きモード');
     }
     
     // 選択状態の反映
@@ -444,11 +451,19 @@ function createBubbleElement(bubble, panel) {
     
     element.dataset.bubbleId = bubble.id;
     
-    // テキスト表示
+    // テキスト表示（強制的に縦書きスタイル適用）
     if (bubble.vertical) {
         element.innerHTML = createVerticalText(bubble.text);
+        // 強制的にスタイルを適用
+        element.style.writingMode = 'vertical-rl';
+        element.style.textOrientation = 'upright';
+        element.style.direction = 'rtl';
+        console.log('🔧 縦書きスタイル強制適用');
     } else {
         element.textContent = bubble.text;
+        element.style.writingMode = 'horizontal-tb';
+        element.style.textOrientation = 'mixed';
+        element.style.direction = 'ltr';
     }
     
     // 位置とサイズ計算
@@ -461,7 +476,20 @@ function createBubbleElement(bubble, panel) {
         top: bubbleY + 'px',
         width: (bubble.width * bubble.scale) + 'px',
         height: (bubble.height * bubble.scale) + 'px',
-        cursor: 'move'
+        cursor: 'move',
+        position: 'absolute',
+        background: 'white',
+        border: '2px solid #333',
+        borderRadius: '20px',
+        padding: '8px 12px',
+        fontSize: '12px',
+        fontWeight: 'bold',
+        color: '#333',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        userSelect: 'none',
+        zIndex: '100'
     });
     
     // イベントリスナー
@@ -473,8 +501,28 @@ function createBubbleElement(bubble, panel) {
         element.appendChild(tail);
     }
     
+    console.log('📝 吹き出し要素作成完了:', element);
     return element;
 }
+
+// createVerticalText 関数も修正
+function createVerticalText(text) {
+    console.log('📝 縦書きテキスト作成:', text);
+    
+    // シンプルな縦書き実装
+    const characters = text.split('');
+    const verticalHTML = characters.map(char => {
+        if (char === '\n') {
+            return '<br>';
+        } else if (char === ' ') {
+            return '<span style="display:block; height:0.5em;"></span>';
+        }
+        return `<span style="display:block; text-align:center; line-height:1.2; margin:1px 0;">${char}</span>`;
+    }).join('');
+    
+    return `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; writing-mode:vertical-rl; text-orientation:upright;">${verticalHTML}</div>`;
+}
+
 
 function createVerticalText(text) {
     const characters = text.split('');
