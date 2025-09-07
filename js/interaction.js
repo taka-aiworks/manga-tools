@@ -1,4 +1,4 @@
-// ===== インタラクションモジュール =====
+// ===== インタラクションモジュール（修正版） =====
 
 function initializeInteraction() {
     console.log('🖱️ インタラクションモジュール初期化');
@@ -742,19 +742,27 @@ function updateCharacterSettings() {
     safeExecute('updateCharacterOverlay');
 }
 
+// ===== 削除機能（修正版 - 統一対応） =====
 function deleteSelected() {
     if (selectedCharacter) {
+        console.log('🗑️ キャラクター削除:', selectedCharacter.name);
         characters = characters.filter(char => char.id !== selectedCharacter.id);
         selectedCharacter = null;
         safeExecute('updateCharacterOverlay');
         showNotification('キャラクターを削除しました', 'success', 2000);
     } else if (selectedBubble) {
+        console.log('🗑️ 吹き出し削除:', selectedBubble.text.substring(0, 10));
         speechBubbles = speechBubbles.filter(bubble => bubble.id !== selectedBubble.id);
         selectedBubble = null;
         safeExecute('updateBubbleOverlay');
         showNotification('吹き出しを削除しました', 'success', 2000);
     } else if (selectedPanel) {
+        console.log('🗑️ パネル削除:', selectedPanel.id);
         deletePanelWithHistory(selectedPanel);
+        return;
+    } else {
+        console.log('❌ 削除対象が選択されていません');
+        showNotification('削除する要素を選択してください', 'warning', 2000);
         return;
     }
     
@@ -763,7 +771,7 @@ function deleteSelected() {
     updateElementCount();
 }
 
-// ===== キーボードショートカット =====
+// ===== キーボードショートカット（修正版） =====
 function handleKeyDown(e) {
     // Ctrl/Cmd キーとの組み合わせ
     if (e.ctrlKey || e.metaKey) {
@@ -798,12 +806,13 @@ function handleKeyDown(e) {
         return;
     }
     
-    // 単体キー
+    // 単体キー（修正版 - Backspaceも追加）
     switch(e.key) {
         case 'Delete':
-        case 'Backspace':
-            if (selectedPanel || selectedElement) {
+        case 'Backspace':  // Backspaceキーも追加
+            if (selectedPanel || selectedCharacter || selectedBubble) {
                 e.preventDefault();
+                console.log('⌨️ キーボード削除実行:', e.key);
                 deleteSelected();
             }
             break;
@@ -871,6 +880,12 @@ function showKeyboardHelp() {
             </div>
             
             <div class="help-section">
+                <h4>🎭 要素操作</h4>
+                <div class="help-item"><kbd>Delete</kbd> / <kbd>Backspace</kbd> 選択要素を削除</div>
+                <div class="help-item">選択された要素（パネル・キャラ・吹き出し）を削除</div>
+            </div>
+            
+            <div class="help-section">
                 <h4>⚡ その他</h4>
                 <div class="help-item"><kbd>G</kbd> ガイド表示切り替え</div>
                 <div class="help-item"><kbd>Ctrl+S</kbd> プロジェクト保存</div>
@@ -879,105 +894,3 @@ function showKeyboardHelp() {
                 <div class="help-item"><kbd>F1</kbd> / <kbd>?</kbd> このヘルプ</div>
             </div>
         </div>
-    `;
-    
-    if (typeof showModal === 'function') {
-        showModal('キーボードショートカット', helpContent, [
-            { text: '閉じる', class: 'btn-primary', onclick: 'closeModal(this)' }
-        ]);
-    } else {
-        alert('キーボードショートカット:\n\nパネル操作: H(横分割) V(縦分割) D(複製) R(回転)\n削除: Delete/Backspace\n元に戻す: Ctrl+Z\nやり直し: Ctrl+Y');
-    }
-}
-
-// ===== UI制御ヘルパー =====
-function updateDisplay() {
-    redrawCanvas();
-    drawGuidelines();
-    safeExecute('updateCharacterOverlay');
-    safeExecute('updateBubbleOverlay');
-    updateElementCount();
-}
-
-function updateUndoRedoButtons() {
-    const undoBtn = document.getElementById('undoBtn');
-    const redoBtn = document.getElementById('redoBtn');
-    
-    if (undoBtn) {
-        undoBtn.disabled = currentHistoryIndex < 0;
-        undoBtn.title = currentHistoryIndex >= 0 ? 
-            `元に戻す: ${operationHistory[currentHistoryIndex]?.type}` : 
-            '元に戻す操作がありません';
-    }
-    
-    if (redoBtn) {
-        redoBtn.disabled = currentHistoryIndex >= operationHistory.length - 1;
-        redoBtn.title = currentHistoryIndex < operationHistory.length - 1 ? 
-            `やり直し: ${operationHistory[currentHistoryIndex + 1]?.type}` : 
-            'やり直す操作がありません';
-    }
-}
-
-function getElementsInPanel(panelId) {
-    return {
-        characters: characters.filter(char => char.panelId === panelId),
-        bubbles: speechBubbles.filter(bubble => bubble.panelId === panelId)
-    };
-}
-
-// ===== 初期化時の追加設定 =====
-function addPanelEditEvents() {
-    // この関数は既にsetupEventListenersに統合されているため、
-    // 互換性のためだけに残している
-    console.log('📐 パネル編集イベントは既に設定済み');
-}
-
-function initializeUIControls() {
-    console.log('🎛️ UIコントロール初期化');
-    
-    // Undo/Redoボタンのイベント設定
-    const undoBtn = document.getElementById('undoBtn');
-    const redoBtn = document.getElementById('redoBtn');
-    const helpBtn = document.getElementById('helpBtn');
-    
-    if (undoBtn) {
-        undoBtn.addEventListener('click', undo);
-    }
-    
-    if (redoBtn) {
-        redoBtn.addEventListener('click', redo);
-    }
-    
-    if (helpBtn) {
-        helpBtn.addEventListener('click', showKeyboardHelp);
-    }
-    
-    // 初期状態の更新
-    updateUndoRedoButtons();
-    
-    console.log('✅ UIコントロール初期化完了');
-}
-
-// ===== グローバル関数として公開 =====
-window.initializeInteraction = initializeInteraction;
-window.setupEventListeners = setupEventListeners;
-window.addPanelEditEvents = addPanelEditEvents;
-window.initializeUIControls = initializeUIControls;
-window.selectPanel = selectPanel;
-window.selectCharacter = selectCharacter;
-window.selectBubble = selectBubble;
-window.clearSelection = clearSelection;
-window.deleteSelected = deleteSelected;
-window.updateControlsFromElement = updateControlsFromElement;
-window.updateSelectedElement = updateSelectedElement;
-window.toggleGuides = toggleGuides;
-window.undo = undo;
-window.redo = redo;
-window.splitPanel = splitPanel;
-window.duplicatePanel = duplicatePanel;
-window.rotatePanel = rotatePanel;
-window.deletePanel = deletePanel;
-window.showKeyboardHelp = showKeyboardHelp;
-window.addToHistory = addToHistory;
-
-console.log('✅ interaction.js 読み込み完了');
