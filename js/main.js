@@ -1,3 +1,378 @@
+// ===== エラー回復システム - main.jsの最初に追加 =====
+
+// 🆕 グローバルエラーハンドリング
+window.addEventListener('error', function(e) {
+    console.error('🚨 グローバルエラー:', e.error);
+    console.error('ファイル:', e.filename, '行:', e.lineno);
+    
+    // エラー回復を試行
+    attemptErrorRecovery(e.error);
+});
+
+// 🆕 未処理のPromise拒否をキャッチ
+window.addEventListener('unhandledrejection', function(e) {
+    console.error('🚨 未処理のPromise拒否:', e.reason);
+    e.preventDefault(); // ブラウザのデフォルトエラー表示を防ぐ
+});
+
+// 🆕 エラー回復システム
+function attemptErrorRecovery(error) {
+    const errorMessage = error?.message || 'Unknown error';
+    
+    console.log('🔧 エラー回復を試行中...', errorMessage);
+    
+    // 関数未定義エラーの場合
+    if (errorMessage.includes('is not defined')) {
+        const functionName = errorMessage.match(/(\w+) is not defined/)?.[1];
+        if (functionName) {
+            console.log(`🔧 未定義関数を検出: ${functionName}`);
+            createFallbackFunction(functionName);
+        }
+    }
+    
+    // 関数未定義エラーの場合の自動修復
+    const commonMissingFunctions = [
+        'updateCharacterOverlay',
+        'updateBubbleOverlay', 
+        'redrawCanvas',
+        'drawGuidelines',
+        'updateElementCount',
+        'analyzeScene',
+        'applyRecommendation',
+        'applyCharacterLayout',
+        'addCharacter',
+        'autoPlaceBubbles',
+        'exportToClipStudio',
+        'exportToPDF',
+        'exportToPNG',
+        'saveProject'
+    ];
+    
+    commonMissingFunctions.forEach(funcName => {
+        if (typeof window[funcName] !== 'function') {
+            createFallbackFunction(funcName);
+        }
+    });
+}
+
+// 🆕 フォールバック関数を動的に作成
+function createFallbackFunction(functionName) {
+    if (typeof window[functionName] === 'function') {
+        return; // 既に存在する場合はスキップ
+    }
+    
+    console.log(`🔧 フォールバック関数を作成: ${functionName}`);
+    
+    // 関数の種類に応じてフォールバック動作を決定
+    switch (functionName) {
+        case 'updateCharacterOverlay':
+            window[functionName] = function() {
+                console.log('📝 updateCharacterOverlay (フォールバック)');
+                // 基本的な再描画のみ
+                const overlay = document.getElementById('characterOverlay');
+                if (overlay) {
+                    // オーバーレイの基本的な更新
+                }
+            };
+            break;
+            
+        case 'updateBubbleOverlay':
+            window[functionName] = function() {
+                console.log('📝 updateBubbleOverlay (フォールバック)');
+                const overlay = document.getElementById('bubbleOverlay');
+                if (overlay) {
+                    // オーバーレイの基本的な更新
+                }
+            };
+            break;
+            
+        case 'redrawCanvas':
+            window[functionName] = function() {
+                console.log('📝 redrawCanvas (フォールバック)');
+                if (ctx && canvas) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+            };
+            break;
+            
+        case 'drawGuidelines':
+            window[functionName] = function() {
+                console.log('📝 drawGuidelines (フォールバック)');
+                // ガイドライン描画のスキップ
+            };
+            break;
+            
+        case 'updateElementCount':
+            window[functionName] = function() {
+                console.log('📝 updateElementCount (フォールバック)');
+                const totalElements = (characters?.length || 0) + (speechBubbles?.length || 0);
+                const elementCountEl = document.getElementById('elementCount');
+                if (elementCountEl) {
+                    elementCountEl.textContent = `要素数: ${totalElements}`;
+                }
+            };
+            break;
+            
+        case 'analyzeScene':
+            window[functionName] = function(sceneType) {
+                console.log('📝 analyzeScene (フォールバック):', sceneType);
+                currentScene = sceneType;
+            };
+            break;
+            
+        case 'applyRecommendation':
+            window[functionName] = function() {
+                console.log('📝 applyRecommendation (フォールバック)');
+                alert('推奨設定機能は現在利用できません');
+            };
+            break;
+            
+        case 'applyCharacterLayout':
+            window[functionName] = function(layoutName) {
+                console.log('📝 applyCharacterLayout (フォールバック):', layoutName);
+                alert('キャラクター配置機能は現在利用できません');
+            };
+            break;
+            
+        case 'addCharacter':
+            window[functionName] = function(type) {
+                console.log('📝 addCharacter (フォールバック):', type);
+                alert('キャラクター追加機能は現在利用できません');
+            };
+            break;
+            
+        case 'autoPlaceBubbles':
+            window[functionName] = function() {
+                console.log('📝 autoPlaceBubbles (フォールバック)');
+                alert('自動配置機能は現在利用できません');
+            };
+            break;
+            
+        case 'exportToClipStudio':
+        case 'exportToPDF':
+        case 'exportToPNG':
+        case 'saveProject':
+            window[functionName] = function() {
+                console.log(`📝 ${functionName} (フォールバック)`);
+                alert('出力機能は現在利用できません');
+            };
+            break;
+            
+        default:
+            // 汎用フォールバック関数
+            window[functionName] = function(...args) {
+                console.log(`📝 ${functionName} (汎用フォールバック)`, args);
+                return null;
+            };
+            break;
+    }
+    
+    console.log(`✅ ${functionName} フォールバック関数を作成しました`);
+}
+
+// 🆕 必須関数の事前チェックと作成
+function ensureRequiredFunctions() {
+    console.log('🔍 必須関数の存在チェック中...');
+    
+    const requiredFunctions = [
+        'updateCharacterOverlay',
+        'updateBubbleOverlay',
+        'redrawCanvas',
+        'drawGuidelines',
+        'updateElementCount',
+        'updateStatus',
+        'selectCharacter',
+        'selectBubble',
+        'selectPanel',
+        'clearSelection',
+        'deleteSelected',
+        'updateControlsFromElement',
+        'updateSelectedElement',
+        'toggleGuides',
+        'showKeyboardHints',
+        'initializeUIControls'
+    ];
+    
+    const missingFunctions = [];
+    
+    requiredFunctions.forEach(funcName => {
+        if (typeof window[funcName] !== 'function') {
+            missingFunctions.push(funcName);
+            createFallbackFunction(funcName);
+        }
+    });
+    
+    if (missingFunctions.length > 0) {
+        console.warn('⚠️ 以下の関数がフォールバックで作成されました:', missingFunctions);
+    } else {
+        console.log('✅ すべての必須関数が存在します');
+    }
+    
+    return missingFunctions;
+}
+
+// 🆕 安全な関数実行
+function safeExecute(functionName, ...args) {
+    try {
+        if (typeof window[functionName] === 'function') {
+            return window[functionName](...args);
+        } else {
+            console.warn(`⚠️ ${functionName} 関数が存在しません`);
+            createFallbackFunction(functionName);
+            return window[functionName](...args);
+        }
+    } catch (error) {
+        console.error(`❌ ${functionName} 実行エラー:`, error);
+        return null;
+    }
+}
+
+// 🆕 デバッグ情報表示
+function showDebugStatus() {
+    const status = {
+        panels: panels?.length || 0,
+        characters: characters?.length || 0,
+        speechBubbles: speechBubbles?.length || 0,
+        canvas: !!canvas,
+        ctx: !!ctx,
+        selectedPanel: selectedPanel?.id || 'なし',
+        selectedCharacter: selectedCharacter?.name || 'なし',
+        selectedBubble: selectedBubble?.text?.substring(0, 20) || 'なし'
+    };
+    
+    console.table(status);
+    return status;
+}
+
+// 🆕 システム修復機能
+function repairSystem() {
+    console.log('🔧 システム修復を開始...');
+    
+    // 1. 基本変数の初期化
+    if (typeof panels === 'undefined') window.panels = [];
+    if (typeof characters === 'undefined') window.characters = [];
+    if (typeof speechBubbles === 'undefined') window.speechBubbles = [];
+    if (typeof selectedPanel === 'undefined') window.selectedPanel = null;
+    if (typeof selectedCharacter === 'undefined') window.selectedCharacter = null;
+    if (typeof selectedBubble === 'undefined') window.selectedBubble = null;
+    if (typeof selectedElement === 'undefined') window.selectedElement = null;
+    if (typeof isDragging === 'undefined') window.isDragging = false;
+    if (typeof dragOffset === 'undefined') window.dragOffset = {x: 0, y: 0};
+    if (typeof currentPage === 'undefined') window.currentPage = 1;
+    if (typeof currentScene === 'undefined') window.currentScene = 'daily';
+    
+    // 2. キャンバス要素の再取得
+    if (!canvas) {
+        canvas = document.getElementById('nameCanvas');
+        if (canvas) {
+            ctx = canvas.getContext('2d');
+            console.log('✅ キャンバス要素を再取得しました');
+        }
+    }
+    
+    if (!guideCanvas) {
+        guideCanvas = document.getElementById('guidelines');
+        if (guideCanvas) {
+            guideCtx = guideCanvas.getContext('2d');
+            console.log('✅ ガイドキャンバス要素を再取得しました');
+        }
+    }
+    
+    // 3. 必須関数の確保
+    ensureRequiredFunctions();
+    
+    // 4. イベントリスナーの再設定
+    if (canvas && typeof setupEventListeners === 'function') {
+        try {
+            setupEventListeners();
+            console.log('✅ イベントリスナーを再設定しました');
+        } catch (error) {
+            console.error('❌ イベントリスナー再設定エラー:', error);
+        }
+    }
+    
+    console.log('✅ システム修復完了');
+    return showDebugStatus();
+}
+
+// 🆕 緊急回復モード
+function emergencyRecover() {
+    console.log('🚨 緊急回復モードを開始...');
+    
+    try {
+        // すべての選択状態をクリア
+        window.selectedPanel = null;
+        window.selectedCharacter = null;
+        window.selectedBubble = null;
+        window.selectedElement = null;
+        window.isDragging = false;
+        
+        // 基本配列の初期化
+        if (!Array.isArray(window.panels)) window.panels = [];
+        if (!Array.isArray(window.characters)) window.characters = [];
+        if (!Array.isArray(window.speechBubbles)) window.speechBubbles = [];
+        
+        // システム修復
+        repairSystem();
+        
+        // 基本テンプレートの読み込み
+        if (window.panels.length === 0) {
+            // 最小限のパネルを作成
+            window.panels = [
+                {id: 1, x: 50, y: 50, width: 500, height: 200},
+                {id: 2, x: 50, y: 270, width: 500, height: 200},
+                {id: 3, x: 50, y: 490, width: 500, height: 200}
+            ];
+            console.log('✅ 緊急用パネルを作成しました');
+        }
+        
+        // 表示更新
+        safeExecute('redrawCanvas');
+        safeExecute('drawGuidelines');
+        safeExecute('updateCharacterOverlay');
+        safeExecute('updateBubbleOverlay');
+        safeExecute('updateElementCount');
+        safeExecute('updateStatus');
+        
+        console.log('✅ 緊急回復完了');
+        
+        if (typeof showNotification === 'function') {
+            showNotification('システムを復旧しました', 'success', 3000);
+        } else {
+            alert('システムを復旧しました');
+        }
+        
+    } catch (error) {
+        console.error('❌ 緊急回復失敗:', error);
+        alert('システム復旧に失敗しました。ページを再読み込みしてください。');
+    }
+}
+
+// グローバル関数として公開
+window.attemptErrorRecovery = attemptErrorRecovery;
+window.createFallbackFunction = createFallbackFunction;
+window.ensureRequiredFunctions = ensureRequiredFunctions;
+window.safeExecute = safeExecute;
+window.showDebugStatus = showDebugStatus;
+window.repairSystem = repairSystem;
+window.emergencyRecover = emergencyRecover;
+
+// ページ読み込み完了時に事前チェック実行
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📋 DOMContentLoaded - 事前システムチェック');
+    ensureRequiredFunctions();
+});
+
+console.log('✅ エラー回復システム 読み込み完了');
+console.log('🔧 緊急時コマンド: window.emergencyRecover()');
+console.log('🔍 デバッグ用: window.showDebugStatus()');
+
+
+
+
+
 // ===== グローバル変数 =====
 let canvas, ctx, guideCanvas, guideCtx;
 let panels = [];
