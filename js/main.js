@@ -224,6 +224,7 @@ const sceneRecommendations = {
 };
 
 // ===== メイン初期化 =====
+
 function initializeApp() {
     console.log('🎬 ネーム制作ツール初期化開始');
     
@@ -245,6 +246,9 @@ function initializeApp() {
     initializeUI();
     initializeInteraction();
     
+    // 🆕 パネル編集機能の初期化
+    addPanelEditEvents();
+    
     // 初期テンプレート読み込み
     loadTemplate('4koma');
     
@@ -259,8 +263,81 @@ function initializeApp() {
         }
     });
     
+    // 🆕 キーボードショートカットヒント表示
+    showKeyboardHints();
+    
     console.log('🎉 初期化完了！');
 }
+
+// 🆕 キーボードショートカットヒント表示
+function showKeyboardHints() {
+    const hints = [
+        'パネル操作: 右クリックでメニュー',
+        'ダブルクリック: パネル分割',
+        'H:横分割 V:縦分割 D:複製 R:回転',
+        'E:吹き出し編集 Delete:削除'
+    ];
+    
+    let currentHint = 0;
+    
+    const hintElement = document.createElement('div');
+    hintElement.className = 'keyboard-hint';
+    hintElement.textContent = hints[currentHint];
+    document.body.appendChild(hintElement);
+    
+    // 3秒後に表示
+    setTimeout(() => {
+        hintElement.classList.add('show');
+    }, 3000);
+    
+    // 5秒ごとにヒントを切り替え
+    setInterval(() => {
+        currentHint = (currentHint + 1) % hints.length;
+        hintElement.textContent = hints[currentHint];
+    }, 5000);
+    
+    // 15秒後に非表示
+    setTimeout(() => {
+        hintElement.classList.remove('show');
+        setTimeout(() => {
+            if (hintElement.parentNode) {
+                hintElement.parentNode.removeChild(hintElement);
+            }
+        }, 300);
+    }, 15000);
+}
+
+// 🆕 通知システム実装（ui.jsから移動・簡素化）
+function showNotification(message, type = 'info', duration = 3000) {
+    // 既存の通知があれば削除
+    const existingNotification = document.querySelector('.notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+    
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    // アニメーション
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+    
+    // 自動削除
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, duration);
+}
+
+console.log('✅ パネル編集初期化コード 読み込み完了');
 
 // ===== テンプレート読み込み =====
 function loadTemplate(templateName) {
