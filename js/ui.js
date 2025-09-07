@@ -209,26 +209,6 @@ function updatePerformanceInfo() {
     }
 }
 
-// ===== 通知システム =====
-function showNotification(message, type = 'info', duration = 3000) {
-    const notification = createNotificationElement(message, type);
-    document.body.appendChild(notification);
-    
-    // アニメーション
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 10);
-    
-    // 自動削除
-    setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    }, duration);
-}
 
 function createNotificationElement(message, type) {
     const notification = document.createElement('div');
