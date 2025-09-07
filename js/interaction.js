@@ -2180,6 +2180,394 @@ window.forceEndDrag = function() {
 
 console.log('✅ リサイズ時スクロール問題 完全修正版 読み込み完了');
 
+// ===== 吹き出しリサイズ・縦書き機能 =====
+
+// 🆕 吹き出しリサイズハンドル追加
+function addBubbleResizeHandles(element, bubble) {
+    // 既存のハンドルを削除
+    element.querySelectorAll('.bubble-resize-handle').forEach(h => h.remove());
+    
+    const handles = [
+        'bottom-right', 'top-left', 'top-right', 'bottom-left'
+    ];
+    
+    handles.forEach(position => {
+        const handle = document.createElement('div');
+        handle.className = `bubble-resize-handle ${position}`;
+        handle.dataset.position = position;
+        
+        // リサイズイベント
+        handle.addEventListener('mousedown', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            
+            console.log('💬 吹き出しリサイズ開始:', position);
+            startBubbleResize(e, bubble, position);
+        }, { passive: false, capture: true });
+        
+        element.appendChild(handle);
+    });
+}
+
+// 🆕 吹き出しリサイズ開始
+function startBubbleResize(e, bubble, position) {
+    console.log('💬 吹き出しリサイズ開始:', bubble.text.substring(0, 10), position);
+    
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    
+    // スクロール位置を固定
+    lockScrollPosition();
+    
+    isBubbleResizing = true;
+    selectedElement = bubble;
+    selectedBubble = bubble;
+    
+    const rect = canvas.getBoundingClientRect();
+    const coords = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+    };
+    
+    const panel = panels.find(p => p.id === bubble.panelId);
+    if (!panel) {
+        unlockScrollPosition();
+        return;
+    }
+    
+    bubbleResizeStartData = {
+        bubble: bubble,
+        position: position,
+        startX: coords.x,
+        startY: coords.y,
+        startWidth: bubble.width,
+        startHeight: bubble.height,
+        startScale: bubble.scale,
+        panel: panel
+    };
+    
+    // イベントリスナー設定
+    const options = { passive: false, capture: true };
+    document.addEventListener('mousemove', handleBubbleResize, options);
+    document.addEventListener('mouseup', endBubbleResize, options);
+    window.addEventListener('mousemove', handleBubbleResize, options);
+    window.addEventListener('mouseup', endBubbleResize, options);
+    
+    console.log('💬 吹き出しリサイズモード開始');
+}
+
+// 🆕 吹き出しリサイズ処理
+function handleBubbleResize(e) {
+    if (!isBubbleResizing || !bubbleResizeStartData.bubble) return;
+    
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    
+    // スクロール位置維持
+    if (window.scrollX !== originalScrollPosition.x || window.scrollY !== originalScrollPosition.y) {
+        window.scrollTo(originalScrollPosition.x, originalScrollPosition.y);
+    }
+    
+    const rect = canvas.getBoundingClientRect();
+    const coords = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+    };
+    
+    const data = bubbleResizeStartData;
+    const deltaX = coords.x - data.startX;
+    const deltaY = coords.y - data.startY;
+    
+    const sensitivity = 0.5; // 吹き出し用の感度
+    
+    let newWidth = data.startWidth;
+    let newHeight = data.startHeight;
+    
+    switch (data.position) {
+        case 'bottom-right':
+            newWidth = Math.max(40, data.startWidth + deltaX * sensitivity);
+            newHeight = Math.max(25, data.startHeight + deltaY * sensitivity);
+            break;
+        case 'top-left':
+            newWidth = Math.max(40, data.startWidth - deltaX * sensitivity);
+            newHeight = Math.max(25, data.startHeight - deltaY * sensitivity);
+            break;
+        case 'top-right':
+            newWidth = Math.max(40, data.startWidth + deltaX * sensitivity);
+            newHeight = Math.max(25, data.startHeight - deltaY * sensitivity);
+            break;
+        case 'bottom-left':
+            newWidth = Math.max(40, data.startWidth - deltaX * sensitivity);
+            newHeight = Math.max(25, data.startHeight + deltaY * sensitivity);
+            break;
+    }
+    
+    // 最大サイズ制限
+    newWidth = Math.min(300, newWidth);
+    newHeight = Math.min(200, newHeight);
+    
+    data.bubble.width = newWidth;
+    data.bubble.height = newHeight;
+    
+    // 表示更新
+    requestAnimationFrame(() => {
+        updateBubbleOverlay();
+        updateControlsFromElement();
+    });
+    
+    return false;
+}
+
+// 🆕 吹き出しリサイズ終了
+function endBubbleResize(e) {
+    if (!isBubbleResizing) return;
+    
+    console.log('💬 吹き出しリサイズ終了');
+    
+    isBubbleResizing = false;
+    bubbleResizeStartData = {};
+    
+    // スクロールロック解除
+    unlockScrollPosition();
+    
+    // イベントリスナー削除
+    const options = { capture: true };
+    document.removeEventListener('mousemove', handleBubbleResize, options);
+    document.removeEventListener('mouseup', endBubbleResize, options);
+    window.removeEventListener('mousemove', handleBubbleResize, options);
+    window.removeEventListener('mouseup', endBubbleResize, options);
+    
+    updateControlsFromElement();
+}
+
+// 🔄 createBubbleElement関数の強化版（リサイズハンドル付き）
+function createBubbleElement(bubble, panel) {
+    const element = document.createElement('div');
+    element.className = `speech-bubble ${bubble.type}`;
+    
+    // 縦書き対応
+    if (bubble.vertical) {
+        element.classList.add('vertical-text');
+    }
+    
+    if (selectedBubble === bubble) {
+        element.classList.add('selected');
+    }
+    
+    element.dataset.bubbleId = bubble.id;
+    
+    // テキスト表示（縦書き対応）
+    if (bubble.vertical) {
+        element.innerHTML = createVerticalText(bubble.text);
+    } else {
+        element.textContent = bubble.text;
+    }
+    
+    // 位置とサイズ計算
+    const bubbleX = panel.x + (panel.width * bubble.x) - (bubble.width * bubble.scale / 2);
+    const bubbleY = panel.y + (panel.height * bubble.y) - (bubble.height * bubble.scale / 2);
+    
+    // スタイル適用
+    Object.assign(element.style, {
+        left: bubbleX + 'px',
+        top: bubbleY + 'px',
+        width: (bubble.width * bubble.scale) + 'px',
+        height: (bubble.height * bubble.scale) + 'px',
+        cursor: 'move'
+    });
+    
+    // ドラッグ機能
+    addBubbleEditEvents(element, bubble, panel);
+    
+    // リサイズハンドル追加（選択時のみ）
+    if (selectedBubble === bubble) {
+        addBubbleResizeHandles(element, bubble);
+    }
+    
+    // 吹き出しの尻尾を追加
+    if (bubble.type !== 'narration') {
+        const tail = createBubbleTail(bubble);
+        element.appendChild(tail);
+    }
+    
+    return element;
+}
+
+// 🆕 縦書きテキスト作成
+function createVerticalText(text) {
+    // 文字を縦に並べる
+    const characters = text.split('');
+    const verticalHTML = characters.map(char => {
+        if (char === '\n' || char === ' ') {
+            return '<br>';
+        }
+        return `<span class="vertical-char">${char}</span>`;
+    }).join('');
+    
+    return `<div class="vertical-text-container">${verticalHTML}</div>`;
+}
+
+// 🆕 吹き出し編集時の縦書き切り替え
+function startBubbleEdit(element, bubble) {
+    selectBubble(bubble);
+    
+    // 編集用のテキストエリアを作成
+    const editArea = document.createElement('textarea');
+    editArea.className = 'bubble-edit-area';
+    editArea.value = bubble.text;
+    
+    // 縦書きモード切り替えボタンを追加
+    const verticalToggle = document.createElement('button');
+    verticalToggle.className = 'vertical-toggle-btn';
+    verticalToggle.textContent = bubble.vertical ? '横書き' : '縦書き';
+    verticalToggle.style.cssText = `
+        position: absolute;
+        top: -30px;
+        right: 0;
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        cursor: pointer;
+        z-index: 1001;
+    `;
+    
+    // スタイル設定
+    Object.assign(editArea.style, {
+        position: 'absolute',
+        left: element.style.left,
+        top: element.style.top,
+        width: element.style.width,
+        height: element.style.height,
+        fontSize: '12px',
+        fontFamily: 'inherit',
+        border: '3px solid #ff6600',
+        borderRadius: '20px',
+        padding: '8px 12px',
+        background: 'white',
+        zIndex: '1000',
+        resize: 'none',
+        textAlign: bubble.vertical ? 'center' : 'center',
+        lineHeight: '1.2',
+        outline: 'none',
+        boxShadow: '0 0 15px rgba(255, 102, 0, 0.7)',
+        writingMode: bubble.vertical ? 'vertical-rl' : 'horizontal-tb'
+    });
+    
+    // 元の要素を隠す
+    element.style.opacity = '0.3';
+    element.style.pointerEvents = 'none';
+    
+    // 編集エリアとボタンを追加
+    const bubbleOverlay = document.getElementById('bubbleOverlay');
+    const editContainer = document.createElement('div');
+    editContainer.style.position = 'relative';
+    editContainer.appendChild(editArea);
+    editContainer.appendChild(verticalToggle);
+    bubbleOverlay.appendChild(editContainer);
+    
+    // フォーカスして全選択
+    editArea.focus();
+    editArea.select();
+    
+    // 縦書き切り替えイベント
+    verticalToggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        bubble.vertical = !bubble.vertical;
+        
+        verticalToggle.textContent = bubble.vertical ? '横書き' : '縦書き';
+        editArea.style.writingMode = bubble.vertical ? 'vertical-rl' : 'horizontal-tb';
+        
+        console.log('📝 縦書き切り替え:', bubble.vertical);
+    });
+    
+    // 編集完了イベント
+    const finishEdit = () => {
+        const newText = editArea.value.trim() || '...';
+        
+        console.log('💾 編集完了:', bubble.text, '→', newText, '縦書き:', bubble.vertical);
+        
+        bubble.text = newText;
+        
+        // サイズを自動調整（縦書き対応）
+        if (bubble.vertical) {
+            adjustBubbleSizeVertical(bubble);
+        } else {
+            adjustBubbleSize(bubble);
+        }
+        
+        // 編集エリアを削除
+        if (editContainer.parentNode) {
+            editContainer.parentNode.removeChild(editContainer);
+        }
+        
+        // 元の要素を復元
+        element.style.opacity = '';
+        element.style.pointerEvents = '';
+        
+        // 表示を更新
+        updateBubbleOverlay();
+        updateStatus();
+        
+        // セリフ入力欄も更新
+        const dialogueInput = document.getElementById('dialogueText');
+        if (dialogueInput && selectedBubble === bubble) {
+            dialogueInput.value = newText;
+        }
+    };
+    
+    // Enterで確定、ESCでキャンセル
+    editArea.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            finishEdit();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            
+            // 縦書き状態を元に戻す
+            bubble.vertical = bubble.vertical; // 元の状態を維持
+            
+            if (editContainer.parentNode) {
+                editContainer.parentNode.removeChild(editContainer);
+            }
+            
+            element.style.opacity = '';
+            element.style.pointerEvents = '';
+            
+            console.log('❌ 編集キャンセル');
+        }
+    });
+    
+    // フォーカスが外れたら確定
+    editArea.addEventListener('blur', function(e) {
+        // ボタンクリック以外の場合のみ確定
+        if (!e.relatedTarget || !e.relatedTarget.classList.contains('vertical-toggle-btn')) {
+            finishEdit();
+        }
+    });
+}
+
+// 🆕 縦書き用サイズ調整
+function adjustBubbleSizeVertical(bubble) {
+    const textLength = bubble.text.length;
+    const lineCount = Math.ceil(textLength / 8); // 縦書きは8文字で改行
+    
+    // 縦書きの場合は幅と高さを逆転
+    bubble.height = Math.max(60, Math.min(250, textLength * 12 + 40));
+    bubble.width = Math.max(35, lineCount * 25 + 25);
+    
+    console.log(`📏 縦書き吹き出しサイズ調整: ${bubble.width}x${bubble.height} (${textLength}文字)`);
+}
+
+// 🆕 グローバル変数に追加（main.jsに追加）
+let isBubbleResizing = false;
+let bubbleResizeStartData = {};
+
+console.log('✅ 吹き出しリサイズ・縦書き機能 読み込み完了');
 
 
 console.log('✅ interaction.js 読み込み完了');
