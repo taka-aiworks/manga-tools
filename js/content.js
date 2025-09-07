@@ -225,18 +225,31 @@ function updateCharacterElementPosition(element, character, panel) {
     });
 }
 
-// content.js の addCharacterEvents 関数を完全に置き換えてください
+// addCharacterEvents 関数の安全版（エラー修正）
 
 function addCharacterEvents(element, character, panel) {
+    // 安全性チェック
+    if (!element || !character || !panel) {
+        console.error('❌ addCharacterEvents: 必要なパラメータがありません', {element, character, panel});
+        return;
+    }
+    
     element.addEventListener('mousedown', function(e) {
         console.log('👤 キャラクタークリック:', character.name);
         e.stopPropagation();
         e.preventDefault();
         
+        // グローバル変数の安全な初期化
+        if (typeof window.isDragging === 'undefined') window.isDragging = false;
+        if (typeof window.isResizing === 'undefined') window.isResizing = false;
+        if (typeof window.selectedElement === 'undefined') window.selectedElement = null;
+        if (typeof window.dragOffset === 'undefined') window.dragOffset = {x: 0, y: 0};
+        if (typeof window.resizeStartData === 'undefined') window.resizeStartData = {};
+        
         selectCharacter(character);
         
         // リサイズハンドルかどうかチェック
-        const isResizeHandle = e.target.classList.contains('resize-handle');
+        const isResizeHandle = e.target && e.target.classList && e.target.classList.contains('resize-handle');
         
         if (isResizeHandle) {
             console.log('🔧 リサイズハンドルクリック検出');
@@ -245,7 +258,7 @@ function addCharacterEvents(element, character, panel) {
             window.isResizing = true;
             window.selectedElement = character;
             
-            const coords = getCanvasCoordinates(e);
+            const coords = getCanvasCoordinates ? getCanvasCoordinates(e) : {x: e.clientX, y: e.clientY};
             const cornerType = e.target.classList.contains('resize-handle-top-left') ? 'top-left' :
                              e.target.classList.contains('resize-handle-top-right') ? 'top-right' :
                              e.target.classList.contains('resize-handle-bottom-left') ? 'bottom-left' :
@@ -254,7 +267,7 @@ function addCharacterEvents(element, character, panel) {
             window.resizeStartData = {
                 startX: coords.x,
                 startY: coords.y,
-                startScale: character.scale,
+                startScale: character.scale || 1.0,
                 cornerType: cornerType
             };
             
@@ -262,8 +275,12 @@ function addCharacterEvents(element, character, panel) {
             
             // リサイズ中のマウス移動とマウスアップをdocumentで監視
             const handleResizeMove = (moveEvent) => {
-                const moveCoords = getCanvasCoordinates(moveEvent);
-                handleCharacterResize(character, moveCoords.x, moveCoords.y);
+                try {
+                    const moveCoords = getCanvasCoordinates ? getCanvasCoordinates(moveEvent) : {x: moveEvent.clientX, y: moveEvent.clientY};
+                    handleCharacterResize(character, moveCoords.x, moveCoords.y);
+                } catch (error) {
+                    console.error('❌ リサイズ移動エラー:', error);
+                }
             };
             
             const handleResizeEnd = () => {
@@ -285,56 +302,143 @@ function addCharacterEvents(element, character, panel) {
             window.isDragging = true;
             window.selectedElement = character;
             
-            const coords = getCanvasCoordinates(e);
-            window.dragOffset.x = coords.x - (panel.x + panel.width * character.x);
-            window.dragOffset.y = coords.y - (panel.y + panel.height * character.y);
+            try {
+                const coords = getCanvasCoordinates ? getCanvasCoordinates(e) : {x: e.clientX, y: e.clientY};
+                
+                // 安全にdragOffsetを設定
+                if (panel.x !== undefined && panel.width !== undefined && character.x !== undefined &&
+                    panel.y !== undefined && panel.height !== undefined && character.y !== undefined) {
+                    
+                    window.dragOffset.x = coords.x - (panel.x + panel.width * character.x);
+                    window.dragOffset.y = coords.y - (panel.y + panel.height * character.y);
+                    
+                    console.log('✅ ドラッグオフセット設定完了:', window.dragOffset);
+                } else {
+                    console.error('❌ ドラッグオフセット計算に必要なデータが不足:', {panel, character});
+                    window.dragOffset = {x: 0, y: 0};
+                }
+            } catch (error) {
+                console.error('❌ ドラッグ開始エラー:', error);
+                window.dragOffset = {x: 0, y: 0};
+            }
         }
     });
 }
 
-// interaction.js の handleCharacterResize 関数を修正
+// handleCharacterResize 関数の安全版
 function handleCharacterResize(character, mouseX, mouseY) {
+    // 安全性チェック
+    if (!character || typeof character.scale === 'undefined') {
+        console.error('❌ handleCharacterResize: characterまたはscaleが未定義');
+        return;
+    }
+    
     if (!window.resizeStartData || !window.resizeStartData.cornerType) {
         console.log('❌ リサイズデータがありません');
         return;
     }
     
-    const deltaX = mouseX - window.resizeStartData.startX;
-    const deltaY = mouseY - window.resizeStartData.startY;
-    
-    // より敏感なリサイズ計算
-    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    let scaleChange = 0;
-    
-    // コーナーの種類によってスケール計算を調整
-    switch(window.resizeStartData.cornerType) {
-        case 'bottom-right':
-            scaleChange = (deltaX + deltaY) * 0.003; // より敏感に
-            break;
-        case 'top-left':
-            scaleChange = -(deltaX + deltaY) * 0.003;
-            break;
-        case 'top-right':
-            scaleChange = (deltaX - deltaY) * 0.003;
-            break;
-        case 'bottom-left':
-            scaleChange = (-deltaX + deltaY) * 0.003;
-            break;
+    try {
+        const deltaX = mouseX - window.resizeStartData.startX;
+        const deltaY = mouseY - window.resizeStartData.startY;
+        
+        // より敏感なリサイズ計算
+        let scaleChange = 0;
+        
+        // コーナーの種類によってスケール計算を調整
+        switch(window.resizeStartData.cornerType) {
+            case 'bottom-right':
+                scaleChange = (deltaX + deltaY) * 0.003; // より敏感に
+                break;
+            case 'top-left':
+                scaleChange = -(deltaX + deltaY) * 0.003;
+                break;
+            case 'top-right':
+                scaleChange = (deltaX - deltaY) * 0.003;
+                break;
+            case 'bottom-left':
+                scaleChange = (-deltaX + deltaY) * 0.003;
+                break;
+        }
+        
+        const newScale = window.resizeStartData.startScale + scaleChange;
+        
+        // スケールの範囲制限と安全な設定
+        character.scale = Math.max(0.2, Math.min(4.0, newScale));
+        
+        console.log(`🔧 リサイズ中: ${character.name} スケール: ${character.scale.toFixed(2)} (変化: ${scaleChange.toFixed(3)})`);
+        
+        // 表示更新
+        if (typeof safeExecute === 'function') {
+            safeExecute('updateCharacterOverlay');
+        }
+        if (typeof updateControlsFromElement === 'function') {
+            updateControlsFromElement();
+        }
+        
+    } catch (error) {
+        console.error('❌ handleCharacterResize エラー:', error);
     }
-    
-    const newScale = window.resizeStartData.startScale + scaleChange;
-    
-    // スケールの範囲制限
-    character.scale = Math.max(0.2, Math.min(4.0, newScale));
-    
-    console.log(`🔧 リサイズ中: ${character.name} スケール: ${character.scale.toFixed(2)} (変化: ${scaleChange.toFixed(3)})`);
-    
-    // 表示更新
-    safeExecute('updateCharacterOverlay');
-    updateControlsFromElement();
 }
 
+// interaction.js の dragElement 関数の安全版
+function dragElement(element, x, y) {
+    // 安全性チェック
+    if (!element || !element.panelId) {
+        console.error('❌ dragElement: elementまたはpanelIdが未定義');
+        return;
+    }
+    
+    const panel = panels ? panels.find(p => p.id === element.panelId) : null;
+    if (!panel) {
+        console.error('❌ dragElement: 対応するパネルが見つかりません', element.panelId);
+        return;
+    }
+    
+    try {
+        // パネル内の相対位置に変換
+        const dragOffsetX = window.dragOffset ? window.dragOffset.x : 0;
+        const dragOffsetY = window.dragOffset ? window.dragOffset.y : 0;
+        
+        const newX = (x - dragOffsetX - panel.x) / panel.width;
+        const newY = (y - dragOffsetY - panel.y) / panel.height;
+        
+        // パネル内に制限して安全に設定
+        element.x = Math.max(0, Math.min(1, newX));
+        element.y = Math.max(0, Math.min(1, newY));
+        
+        console.log('📍 要素移動:', element.x.toFixed(3), element.y.toFixed(3));
+        
+        // 表示更新
+        if (selectedCharacter && typeof safeExecute === 'function') {
+            safeExecute('updateCharacterOverlay');
+        } else if (selectedBubble && typeof safeExecute === 'function') {
+            safeExecute('updateBubbleOverlay');
+        }
+        
+        if (typeof updateControlsFromElement === 'function') {
+            updateControlsFromElement();
+        }
+        
+    } catch (error) {
+        console.error('❌ dragElement エラー:', error);
+    }
+}
 
+// グローバル変数の初期化を確実にする関数
+function initializeInteractionGlobals() {
+    if (typeof window.isDragging === 'undefined') window.isDragging = false;
+    if (typeof window.isResizing === 'undefined') window.isResizing = false;
+    if (typeof window.selectedElement === 'undefined') window.selectedElement = null;
+    if (typeof window.dragOffset === 'undefined') window.dragOffset = {x: 0, y: 0};
+    if (typeof window.resizeStartData === 'undefined') window.resizeStartData = {};
+    
+    console.log('✅ インタラクショングローバル変数初期化完了');
+}
+
+// アプリ起動時に呼び出し
+window.addEventListener('DOMContentLoaded', initializeInteractionGlobals);
+window.addEventListener('load', initializeInteractionGlobals);
 
 // キャラクターリサイズハンドルを追加する関数も修正
 function addCharacterResizeHandles(element) {
