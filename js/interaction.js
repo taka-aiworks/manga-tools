@@ -184,9 +184,9 @@ function handleResizeGlobal(e) {
     let positionChangeY = 0;
     
     // 🎯 感度を上げる（0.001 → 0.003）
-    const sensitivity = 0.003;
+    const sensitivity = 0.005;
     // 🎯 位置変更の感度も上げる（0.2 → 0.4）
-    const positionSensitivity = 0.4;
+    const positionSensitivity = 0.6;
     
     switch (data.position) {
         case 'bottom-right':
