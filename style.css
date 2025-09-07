@@ -2299,4 +2299,109 @@ html[data-theme="dark"] .control-btn:focus {
     border-radius: 4px;
     font-size: 10px;
     cursor: pointer;
-    z-index: 1
+    z-index: 1;
+}
+
+
+/* 縦書き吹き出し用スタイル */
+.speech-bubble.vertical-text {
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    direction: rtl;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 6px;
+    line-height: 1.4;
+}
+
+.vertical-text-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+}
+
+.vertical-char {
+    display: block;
+    text-align: center;
+    line-height: 1.2;
+    margin: 1px 0;
+}
+
+/* 横書き用のデフォルトスタイル */
+.speech-bubble:not(.vertical-text) {
+    writing-mode: horizontal-tb;
+    text-orientation: mixed;
+    direction: ltr;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    line-height: 1.3;
+}
+
+/* キャラクターリサイズハンドル用スタイル */
+.character-placeholder {
+    position: relative;
+}
+
+.resize-handle {
+    position: absolute;
+    background: #ff6600;
+    border: 1px solid #fff;
+    box-shadow: 0 0 3px rgba(0,0,0,0.3);
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.character-placeholder:hover .resize-handle,
+.character-placeholder.selected .resize-handle {
+    opacity: 1;
+}
+
+.resize-handle-top-left {
+    cursor: nw-resize;
+}
+
+.resize-handle-top-right {
+    cursor: ne-resize;
+}
+
+.resize-handle-bottom-left {
+    cursor: sw-resize;
+}
+
+.resize-handle-bottom-right {
+    cursor: se-resize;
+}
+
+/* 選択されたキャラクターの強調表示 */
+.character-placeholder.selected {
+    outline: 2px solid #ff6600;
+    outline-offset: 2px;
+    box-shadow: 0 0 10px rgba(255, 102, 0, 0.3);
+}
+
+/* 吹き出し編集エリアのスタイル改善 */
+.bubble-edit-area {
+    font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+    resize: none;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.bubble-edit-area:focus {
+    border-color: #ff8833;
+    box-shadow: 0 0 20px rgba(255, 136, 51, 0.8);
+}
+
+.vertical-toggle-btn:hover {
+    background: #5a7bc8 !important;
+    transform: scale(1.05);
+}
