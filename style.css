@@ -1352,3 +1352,175 @@ body.resize-mode * {
 body.resize-mode .resize-handle {
     transition: all 0.2s ease !important;
 }
+
+
+/* ===== 吹き出し編集用CSS（style.cssに追加） ===== */
+
+/* 吹き出し編集エリア */
+.bubble-edit-area {
+    position: absolute;
+    border: 3px solid #ff6600 !important;
+    border-radius: 20px !important;
+    padding: 8px 12px !important;
+    background: white !important;
+    font-size: 12px !important;
+    font-family: inherit !important;
+    text-align: center !important;
+    line-height: 1.2 !important;
+    resize: none !important;
+    outline: none !important;
+    box-shadow: 0 0 15px rgba(255, 102, 0, 0.7) !important;
+    z-index: 1000 !important;
+    transition: all 0.2s ease;
+}
+
+.bubble-edit-area:focus {
+    box-shadow: 0 0 20px rgba(255, 102, 0, 0.9) !important;
+    border-color: #ff8833 !important;
+}
+
+/* 編集中の吹き出し表示 */
+.speech-bubble.editing {
+    opacity: 0.3 !important;
+    pointer-events: none !important;
+}
+
+/* 吹き出しホバー効果の改良 */
+.speech-bubble:hover {
+    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+    transform: translateY(-1px);
+    border-color: #0088ff;
+}
+
+.speech-bubble.selected:hover {
+    border-color: #ff8833;
+    box-shadow: 0 0 15px rgba(255, 136, 51, 0.8);
+}
+
+/* 編集可能であることを示すカーソル */
+.speech-bubble {
+    cursor: move;
+    transition: all 0.2s ease;
+}
+
+.speech-bubble:hover::after {
+    content: "✏️ ダブルクリックで編集";
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    white-space: nowrap;
+    opacity: 0;
+    animation: fadeInTooltip 0.3s ease 0.5s forwards;
+    pointer-events: none;
+    z-index: 999;
+}
+
+@keyframes fadeInTooltip {
+    from { opacity: 0; transform: translateX(-50%) translateY(-5px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ダークモード対応 */
+html[data-theme="dark"] .bubble-edit-area {
+    background: #2d2d2d !important;
+    color: #e0e0e0 !important;
+    border-color: #ff8833 !important;
+}
+
+html[data-theme="dark"] .bubble-edit-area:focus {
+    border-color: #ffaa55 !important;
+    box-shadow: 0 0 20px rgba(255, 170, 85, 0.7) !important;
+}
+
+html[data-theme="dark"] .speech-bubble:hover::after {
+    background: rgba(255, 255, 255, 0.9);
+    color: #333;
+}
+
+/* 吹き出しタイプ別の編集スタイル */
+.speech-bubble.shout .bubble-edit-area {
+    border-width: 4px !important;
+    font-weight: bold !important;
+}
+
+.speech-bubble.whisper .bubble-edit-area {
+    border-style: dashed !important;
+    font-size: 11px !important;
+    opacity: 0.9 !important;
+}
+
+.speech-bubble.thought .bubble-edit-area {
+    border-radius: 30px !important;
+    border-style: dotted !important;
+    background: #f0f8ff !important;
+}
+
+.speech-bubble.narration .bubble-edit-area {
+    border-radius: 8px !important;
+    background: #f5f5f5 !important;
+    border-color: #999 !important;
+}
+
+/* 編集エリアの自動リサイズアニメーション */
+.bubble-edit-area {
+    transition: width 0.2s ease, height 0.2s ease;
+}
+
+/* モバイル対応 */
+@media (max-width: 768px) {
+    .bubble-edit-area {
+        font-size: 14px !important;
+        padding: 10px 15px !important;
+        min-height: 40px !important;
+    }
+    
+    .speech-bubble:hover::after {
+        content: "📱 タップで編集";
+        font-size: 9px;
+    }
+}
+
+/* 編集中のページ保護 */
+body.bubble-editing {
+    user-select: none;
+}
+
+body.bubble-editing .bubble-edit-area {
+    user-select: text !important;
+}
+
+/* 複数選択時の表示 */
+.speech-bubble.multi-selected {
+    border-color: #9966ff !important;
+    background: rgba(153, 102, 255, 0.1) !important;
+}
+
+/* 編集ショートカット表示 */
+.speech-bubble.selected::before {
+    content: "E";
+    position: absolute;
+    top: -12px;
+    right: -12px;
+    width: 20px;
+    height: 20px;
+    background: #ff6600;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+    opacity: 0.8;
+    z-index: 100;
+}
+
+html[data-theme="dark"] .speech-bubble.selected::before {
+    background: #ff8833;
+}
