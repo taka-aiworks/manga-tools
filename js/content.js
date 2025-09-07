@@ -149,47 +149,59 @@ function createCharacterElement(character, panel) {
     return element;
 }
 
-// キャラクターリサイズハンドルを追加
+// キャラクターリサイズハンドルの改良版
 function addCharacterResizeHandles(element) {
-    const handleSize = 8;
+    const handleSize = 10; // 少し大きく
     const handles = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+    
+    // 既存のハンドルを削除
+    element.querySelectorAll('.resize-handle').forEach(handle => handle.remove());
     
     handles.forEach(position => {
         const handle = document.createElement('div');
         handle.className = `resize-handle resize-handle-${position}`;
-        handle.style.cssText = `
-            position: absolute;
-            width: ${handleSize}px;
-            height: ${handleSize}px;
-            background: #ff6600;
-            border: 1px solid #fff;
-            cursor: ${position.includes('top') ? (position.includes('left') ? 'nw-resize' : 'ne-resize') : (position.includes('left') ? 'sw-resize' : 'se-resize')};
-            z-index: 1000;
-        `;
         
-        // 位置設定
+        // より目立つスタイル
+        Object.assign(handle.style, {
+            position: 'absolute',
+            width: handleSize + 'px',
+            height: handleSize + 'px',
+            background: '#ff6600',
+            border: '2px solid #fff',
+            borderRadius: '3px',
+            cursor: position.includes('top') ? 
+                (position.includes('left') ? 'nw-resize' : 'ne-resize') : 
+                (position.includes('left') ? 'sw-resize' : 'se-resize'),
+            zIndex: '1001',
+            boxShadow: '0 0 4px rgba(0,0,0,0.3)'
+        });
+        
+        // 位置設定（要素の外側に配置）
         switch(position) {
             case 'top-left':
-                handle.style.top = '0px';
-                handle.style.left = '0px';
+                handle.style.top = '-5px';
+                handle.style.left = '-5px';
                 break;
             case 'top-right':
-                handle.style.top = '0px';
-                handle.style.right = '0px';
+                handle.style.top = '-5px';
+                handle.style.right = '-5px';
                 break;
             case 'bottom-left':
-                handle.style.bottom = '0px';
-                handle.style.left = '0px';
+                handle.style.bottom = '-5px';
+                handle.style.left = '-5px';
                 break;
             case 'bottom-right':
-                handle.style.bottom = '0px';
-                handle.style.right = '0px';
+                handle.style.bottom = '-5px';
+                handle.style.right = '-5px';
                 break;
         }
         
         element.appendChild(handle);
     });
+    
+    console.log('✅ リサイズハンドル追加完了 (改良版)');
 }
+
 
 function updateCharacterElementPosition(element, character, panel) {
     const charX = panel.x + (panel.width * character.x) - 30;
@@ -205,72 +217,116 @@ function updateCharacterElementPosition(element, character, panel) {
     });
 }
 
-// content.js の addCharacterEvents 関数を以下に置き換えてください
+// content.js の addCharacterEvents 関数を完全に置き換えてください
 
 function addCharacterEvents(element, character, panel) {
-    let isResizeMode = false;
-    
     element.addEventListener('mousedown', function(e) {
         console.log('👤 キャラクタークリック:', character.name);
         e.stopPropagation();
         e.preventDefault();
         
-        if (isDragging) {
-            isDragging = false;
-            selectedElement = null;
-        }
-        
         selectCharacter(character);
         
-        // リサイズハンドルのクリック判定
-        const target = e.target;
-        if (target.classList.contains('resize-handle')) {
-            console.log('🔧 リサイズハンドルクリック:', target.className);
+        // リサイズハンドルかどうかチェック
+        const isResizeHandle = e.target.classList.contains('resize-handle');
+        
+        if (isResizeHandle) {
+            console.log('🔧 リサイズハンドルクリック検出');
             
-            isResizeMode = true;
-            isResizing = true;
-            selectedElement = character;
+            // リサイズモード開始
+            window.isResizing = true;
+            window.selectedElement = character;
             
             const coords = getCanvasCoordinates(e);
-            const cornerType = target.classList.contains('resize-handle-top-left') ? 'top-left' :
-                             target.classList.contains('resize-handle-top-right') ? 'top-right' :
-                             target.classList.contains('resize-handle-bottom-left') ? 'bottom-left' :
+            const cornerType = e.target.classList.contains('resize-handle-top-left') ? 'top-left' :
+                             e.target.classList.contains('resize-handle-top-right') ? 'top-right' :
+                             e.target.classList.contains('resize-handle-bottom-left') ? 'bottom-left' :
                              'bottom-right';
                              
-            resizeStartData = {
+            window.resizeStartData = {
                 startX: coords.x,
                 startY: coords.y,
                 startScale: character.scale,
                 cornerType: cornerType
             };
             
-            console.log('🔧 リサイズ開始:', cornerType, 'スケール:', character.scale);
-            return;
-        }
-        
-        // 通常のドラッグ開始
-        isResizeMode = false;
-        isDragging = true;
-        selectedElement = character;
-        
-        const coords = getCanvasCoordinates(e);
-        dragOffset.x = coords.x - (panel.x + panel.width * character.x);
-        dragOffset.y = coords.y - (panel.y + panel.height * character.y);
-        
-        console.log('🚀 キャラクタードラッグ開始');
-    });
-    
-    // マウスアップ時の処理
-    element.addEventListener('mouseup', function(e) {
-        if (isResizeMode) {
-            console.log('🔧 リサイズ完了');
-            isResizeMode = false;
-            isResizing = false;
-            selectedElement = null;
-            resizeStartData = {};
+            console.log('🔧 リサイズ開始:', cornerType, '初期スケール:', character.scale);
+            
+            // リサイズ中のマウス移動とマウスアップをdocumentで監視
+            const handleResizeMove = (moveEvent) => {
+                const moveCoords = getCanvasCoordinates(moveEvent);
+                handleCharacterResize(character, moveCoords.x, moveCoords.y);
+            };
+            
+            const handleResizeEnd = () => {
+                console.log('🔧 リサイズ終了');
+                window.isResizing = false;
+                window.selectedElement = null;
+                window.resizeStartData = {};
+                document.removeEventListener('mousemove', handleResizeMove);
+                document.removeEventListener('mouseup', handleResizeEnd);
+            };
+            
+            document.addEventListener('mousemove', handleResizeMove);
+            document.addEventListener('mouseup', handleResizeEnd);
+            
+        } else {
+            console.log('🚀 通常ドラッグ開始');
+            
+            // 通常のドラッグ開始
+            window.isDragging = true;
+            window.selectedElement = character;
+            
+            const coords = getCanvasCoordinates(e);
+            window.dragOffset.x = coords.x - (panel.x + panel.width * character.x);
+            window.dragOffset.y = coords.y - (panel.y + panel.height * character.y);
         }
     });
 }
+
+// interaction.js の handleCharacterResize 関数を修正
+function handleCharacterResize(character, mouseX, mouseY) {
+    if (!window.resizeStartData || !window.resizeStartData.cornerType) {
+        console.log('❌ リサイズデータがありません');
+        return;
+    }
+    
+    const deltaX = mouseX - window.resizeStartData.startX;
+    const deltaY = mouseY - window.resizeStartData.startY;
+    
+    // より敏感なリサイズ計算
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    let scaleChange = 0;
+    
+    // コーナーの種類によってスケール計算を調整
+    switch(window.resizeStartData.cornerType) {
+        case 'bottom-right':
+            scaleChange = (deltaX + deltaY) * 0.003; // より敏感に
+            break;
+        case 'top-left':
+            scaleChange = -(deltaX + deltaY) * 0.003;
+            break;
+        case 'top-right':
+            scaleChange = (deltaX - deltaY) * 0.003;
+            break;
+        case 'bottom-left':
+            scaleChange = (-deltaX + deltaY) * 0.003;
+            break;
+    }
+    
+    const newScale = window.resizeStartData.startScale + scaleChange;
+    
+    // スケールの範囲制限
+    character.scale = Math.max(0.2, Math.min(4.0, newScale));
+    
+    console.log(`🔧 リサイズ中: ${character.name} スケール: ${character.scale.toFixed(2)} (変化: ${scaleChange.toFixed(3)})`);
+    
+    // 表示更新
+    safeExecute('updateCharacterOverlay');
+    updateControlsFromElement();
+}
+
+
 
 // キャラクターリサイズハンドルを追加する関数も修正
 function addCharacterResizeHandles(element) {
