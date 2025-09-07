@@ -1,4 +1,29 @@
-// ===== コンテンツ管理モジュール（修正版） =====
+// ===== コンテンツ管理モジュール（完全修正版） =====
+
+// ===== 選択関数をwindowオブジェクトに直接定義 =====
+window.selectCharacter = function(character) {
+    window.selectedCharacter = character;
+    window.selectedBubble = null;
+    window.selectedPanel = null;
+    window.selectedElement = character;
+    
+    window.safeExecute('updateCharacterOverlay');
+    window.safeExecute('updateStatus');
+    
+    console.log('👤 キャラクター選択:', character.name);
+};
+
+window.selectBubble = function(bubble) {
+    window.selectedBubble = bubble;
+    window.selectedCharacter = null;
+    window.selectedPanel = null;
+    window.selectedElement = bubble;
+    
+    window.safeExecute('updateBubbleOverlay');
+    window.safeExecute('updateStatus');
+    
+    console.log('💬 吹き出し選択:', bubble.text.substring(0, 15));
+};
 
 // ===== キャラクター管理 =====
 function addCharacter(type) {
@@ -134,6 +159,11 @@ function createCharacterElement(character, panel) {
         <div class="character-name">${character.name}</div>
     `;
     
+    // 選択時のリサイズハンドルを追加
+    if (selectedCharacter === character) {
+        addCharacterResizeHandles(element);
+    }
+    
     // 位置とサイズ設定
     updateCharacterElementPosition(element, character, panel);
     element.style.cursor = 'move';
@@ -142,6 +172,48 @@ function createCharacterElement(character, panel) {
     addCharacterEvents(element, character, panel);
     
     return element;
+}
+
+// キャラクターリサイズハンドルを追加
+function addCharacterResizeHandles(element) {
+    const handleSize = 8;
+    const handles = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+    
+    handles.forEach(position => {
+        const handle = document.createElement('div');
+        handle.className = `resize-handle resize-handle-${position}`;
+        handle.style.cssText = `
+            position: absolute;
+            width: ${handleSize}px;
+            height: ${handleSize}px;
+            background: #ff6600;
+            border: 1px solid #fff;
+            cursor: ${position.includes('top') ? (position.includes('left') ? 'nw-resize' : 'ne-resize') : (position.includes('left') ? 'sw-resize' : 'se-resize')};
+            z-index: 1000;
+        `;
+        
+        // 位置設定
+        switch(position) {
+            case 'top-left':
+                handle.style.top = '0px';
+                handle.style.left = '0px';
+                break;
+            case 'top-right':
+                handle.style.top = '0px';
+                handle.style.right = '0px';
+                break;
+            case 'bottom-left':
+                handle.style.bottom = '0px';
+                handle.style.left = '0px';
+                break;
+            case 'bottom-right':
+                handle.style.bottom = '0px';
+                handle.style.right = '0px';
+                break;
+        }
+        
+        element.appendChild(handle);
+    });
 }
 
 function updateCharacterElementPosition(element, character, panel) {
@@ -169,17 +241,61 @@ function addCharacterEvents(element, character, panel) {
             selectedElement = null;
         }
         
-        selectCharacter(character);
+        // window経由で関数を呼び出し
+        window.selectCharacter(character);
         
-        isDragging = true;
-        selectedElement = character;
+        // コーナーハンドルクリック判定
+        const rect = element.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+        const handleSize = 8;
         
-        const coords = getCanvasCoordinates(e);
-        dragOffset.x = coords.x - (panel.x + panel.width * character.x);
-        dragOffset.y = coords.y - (panel.y + panel.height * character.y);
+        // 4つのコーナーをチェック
+        const corners = [
+            { x: 0, y: 0, type: 'top-left' },
+            { x: rect.width - handleSize, y: 0, type: 'top-right' },
+            { x: 0, y: rect.height - handleSize, type: 'bottom-left' },
+            { x: rect.width - handleSize, y: rect.height - handleSize, type: 'bottom-right' }
+        ];
         
-        console.log('🚀 キャラクタードラッグ開始');
+        let isResizing = false;
+        for (const corner of corners) {
+            if (clickX >= corner.x && clickX <= corner.x + handleSize &&
+                clickY >= corner.y && clickY <= corner.y + handleSize) {
+                console.log('🔧 キャラクターリサイズ開始:', corner.type);
+                startCharacterResize(character, corner.type, e);
+                isResizing = true;
+                break;
+            }
+        }
+        
+        if (!isResizing) {
+            isDragging = true;
+            selectedElement = character;
+            
+            const coords = getCanvasCoordinates(e);
+            dragOffset.x = coords.x - (panel.x + panel.width * character.x);
+            dragOffset.y = coords.y - (panel.y + panel.height * character.y);
+            
+            console.log('🚀 キャラクタードラッグ開始');
+        }
     });
+}
+
+// キャラクターリサイズ開始
+function startCharacterResize(character, cornerType, e) {
+    isResizing = true;
+    selectedElement = character;
+    
+    const coords = getCanvasCoordinates(e);
+    resizeStartData = {
+        startX: coords.x,
+        startY: coords.y,
+        startScale: character.scale,
+        cornerType: cornerType
+    };
+    
+    console.log('🔧 キャラクターリサイズ開始:', character.name, cornerType);
 }
 
 // ===== 吹き出し管理（修正版） =====
@@ -361,7 +477,8 @@ function addBubbleEvents(element, bubble, panel) {
         e.stopPropagation();
         e.preventDefault();
         
-        selectBubble(bubble);
+        // window経由で関数を呼び出し
+        window.selectBubble(bubble);
         isDragging = true;
         selectedElement = bubble;
         
@@ -381,6 +498,8 @@ function addBubbleEvents(element, bubble, panel) {
         if (!editingInProgress) {
             console.log('💬 右クリック編集開始:', bubble.text);
             editingInProgress = true;
+            // 吹き出しを選択
+            window.selectBubble(bubble);
             startBubbleEdit(element, bubble, () => {
                 editingInProgress = false;  // 編集完了時にフラグを解除
             });
@@ -396,6 +515,8 @@ function addBubbleEvents(element, bubble, panel) {
         if (!editingInProgress) {
             console.log('💬 ダブルクリック編集開始:', bubble.text);
             editingInProgress = true;
+            // 吹き出しを選択
+            window.selectBubble(bubble);
             startBubbleEdit(element, bubble, () => {
                 editingInProgress = false;  // 編集完了時にフラグを解除
             });
@@ -404,7 +525,7 @@ function addBubbleEvents(element, bubble, panel) {
 }
 
 function startBubbleEdit(element, bubble, onComplete) {
-    selectBubble(bubble);
+    window.selectBubble(bubble);
     
     // 編集用のテキストエリアを作成
     const editArea = document.createElement('textarea');
@@ -660,6 +781,9 @@ function getContentStats() {
 }
 
 // ===== グローバル関数として公開 =====
+window.addCharacterResizeHandles = addCharacterResizeHandles;
+
+console.log('✅ content.js 読み込み完了（完全修正版 - 関数スコープ修正、縦書きデフォルト、リサイズ機能）'); = addCharacter;
 window.addCharacter = addCharacter;
 window.applyCharacterLayout = applyCharacterLayout;
 window.updateCharacterOverlay = updateCharacterOverlay;
@@ -672,30 +796,3 @@ window.getElementsInPanel = getElementsInPanel;
 window.getContentStats = getContentStats;
 window.startCharacterResize = startCharacterResize;
 window.addCharacterResizeHandles = addCharacterResizeHandles;
-
-// 選択関数も公開（エラー回避のため）
-window.selectCharacter = function(character) {
-    selectedCharacter = character;
-    selectedBubble = null;
-    selectedPanel = null;
-    selectedElement = character;
-    
-    updateCharacterOverlay();
-    updateStatus();
-    
-    console.log('👤 キャラクター選択:', character.name);
-};
-
-window.selectBubble = function(bubble) {
-    selectedBubble = bubble;
-    selectedCharacter = null;
-    selectedPanel = null;
-    selectedElement = bubble;
-    
-    updateBubbleOverlay();
-    updateStatus();
-    
-    console.log('💬 吹き出し選択:', bubble.text.substring(0, 15));
-};
-
-console.log('✅ content.js 読み込み完了（修正版 - 縦書きデフォルト、編集機能修正、リサイズ機能追加）');
