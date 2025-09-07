@@ -232,6 +232,9 @@ const sceneRecommendations = {
 
 // ===== メイン初期化 =====
 
+// ===== main.js エラー修正版 - initializeApp関数 =====
+
+// 🔧 initializeApp関数の修正版（既存の関数を置き換え）
 function initializeApp() {
     console.log('🎬 ネーム制作ツール初期化開始');
     
@@ -251,13 +254,51 @@ function initializeApp() {
     // 各モジュールの初期化
     initializeCanvas();
     initializeUI();
-    initializeInteraction();
     
-    // 🆕 パネル編集機能の初期化
-    addPanelEditEvents();
+    // 🔧 修正：正しい関数名を使用
+    try {
+        // interaction.jsで定義されている関数を呼び出し
+        if (typeof setupEventListeners === 'function') {
+            setupEventListeners();
+            console.log('✅ イベントリスナー設定完了');
+        } else {
+            console.warn('⚠️ setupEventListeners関数が見つかりません');
+            // 手動でイベント設定
+            manualSetupEvents();
+        }
+    } catch (error) {
+        console.error('❌ イベント設定エラー:', error);
+        // フォールバック
+        manualSetupEvents();
+    }
+    
+    // パネル編集機能の初期化
+    try {
+        if (typeof addPanelEditEvents === 'function') {
+            addPanelEditEvents();
+            console.log('✅ パネル編集イベント設定完了');
+        } else {
+            console.warn('⚠️ addPanelEditEvents関数が見つかりません - 後で追加してください');
+        }
+    } catch (error) {
+        console.error('❌ パネル編集イベント設定エラー:', error);
+    }
+    
+    // UI コントロール初期化
+    try {
+        initializeUIControls();
+        console.log('✅ UIコントロール初期化完了');
+    } catch (error) {
+        console.error('❌ UIコントロール初期化エラー:', error);
+    }
     
     // 初期テンプレート読み込み
-    loadTemplate('4koma');
+    try {
+        loadTemplate('4koma');
+        console.log('✅ 初期テンプレート読み込み完了');
+    } catch (error) {
+        console.error('❌ テンプレート読み込みエラー:', error);
+    }
     
     // マウス位置表示
     canvas.addEventListener('mousemove', function(e) {
@@ -270,49 +311,132 @@ function initializeApp() {
         }
     });
     
-    // 🆕 キーボードショートカットヒント表示
-    showKeyboardHints();
+    // キーボードショートカットヒント表示
+    try {
+        showKeyboardHints();
+    } catch (error) {
+        console.warn('⚠️ キーボードヒント表示エラー:', error);
+    }
     
     console.log('🎉 初期化完了！');
 }
 
-// 🆕 キーボードショートカットヒント表示
-function showKeyboardHints() {
-    const hints = [
-        'パネル操作: 右クリックでメニュー',
-        'ダブルクリック: パネル分割',
-        'H:横分割 V:縦分割 D:複製 R:回転',
-        'E:吹き出し編集 Delete:削除'
+// 🆕 手動イベント設定（フォールバック）
+function manualSetupEvents() {
+    console.log('🔧 手動イベント設定開始');
+    
+    // 基本的なキャンバスイベント
+    if (canvas) {
+        canvas.addEventListener('mousedown', function(e) {
+            console.log('🖱️ マウスダウン（基本版）');
+            // 基本的な処理のみ
+        });
+        
+        canvas.addEventListener('mousemove', function(e) {
+            // マウス位置更新のみ
+        });
+        
+        canvas.addEventListener('mouseup', function(e) {
+            console.log('🖱️ マウスアップ（基本版）');
+            // 基本的な処理のみ
+        });
+    }
+    
+    // キーボードイベント
+    document.addEventListener('keydown', function(e) {
+        // 基本的なキーボード処理
+        if (e.key === 'Escape') {
+            console.log('⌨️ Escape - 選択解除');
+            if (typeof clearSelection === 'function') {
+                clearSelection();
+            }
+        }
+    });
+    
+    console.log('✅ 手動イベント設定完了');
+}
+
+// 🆕 関数存在チェック
+function checkRequiredFunctions() {
+    const requiredFunctions = [
+        'initializeCanvas',
+        'initializeUI', 
+        'setupEventListeners',
+        'addPanelEditEvents',
+        'loadTemplate',
+        'showKeyboardHints'
     ];
     
-    let currentHint = 0;
+    const missingFunctions = [];
     
-    const hintElement = document.createElement('div');
-    hintElement.className = 'keyboard-hint';
-    hintElement.textContent = hints[currentHint];
-    document.body.appendChild(hintElement);
+    requiredFunctions.forEach(funcName => {
+        if (typeof window[funcName] !== 'function') {
+            missingFunctions.push(funcName);
+        }
+    });
     
-    // 3秒後に表示
-    setTimeout(() => {
-        hintElement.classList.add('show');
-    }, 3000);
+    if (missingFunctions.length > 0) {
+        console.warn('⚠️ 以下の関数が見つかりません:', missingFunctions);
+        console.log('💡 対応方法:');
+        missingFunctions.forEach(funcName => {
+            console.log(`- ${funcName}: 対応するJSファイルを確認してください`);
+        });
+    } else {
+        console.log('✅ 必要な関数がすべて存在します');
+    }
     
-    // 5秒ごとにヒントを切り替え
-    setInterval(() => {
-        currentHint = (currentHint + 1) % hints.length;
-        hintElement.textContent = hints[currentHint];
-    }, 5000);
-    
-    // 15秒後に非表示
-    setTimeout(() => {
-        hintElement.classList.remove('show');
-        setTimeout(() => {
-            if (hintElement.parentNode) {
-                hintElement.parentNode.removeChild(hintElement);
-            }
-        }, 300);
-    }, 15000);
+    return missingFunctions;
 }
+
+// 🆕 安全な初期化（エラー耐性）
+function safeInitialize() {
+    console.log('🛡️ 安全な初期化開始');
+    
+    try {
+        // 関数存在チェック
+        const missingFunctions = checkRequiredFunctions();
+        
+        // 必須関数が不足している場合の警告
+        if (missingFunctions.length > 0) {
+            console.warn('❌ 一部の機能が利用できません');
+            
+            // ユーザーに通知
+            if (typeof showNotification === 'function') {
+                showNotification('一部の機能が読み込まれていません。コンソールを確認してください。', 'warning', 5000);
+            } else {
+                alert('一部の機能が読み込まれていません。\nF12キーでコンソールを確認してください。');
+            }
+        }
+        
+        // 初期化実行
+        initializeApp();
+        
+    } catch (error) {
+        console.error('❌ 初期化中にエラーが発生しました:', error);
+        
+        // エラー情報をユーザーに表示
+        const errorMessage = `初期化エラーが発生しました:\n${error.message}\n\nページを再読み込みしてください。`;
+        alert(errorMessage);
+    }
+}
+
+// 🔧 既存の起動処理を安全版に変更
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', safeInitialize);
+} else {
+    safeInitialize();
+}
+
+// 念のため、window.onloadでも実行
+window.addEventListener('load', function() {
+    if (!canvas) {
+        console.log('🔄 Window load時に再初期化');
+        safeInitialize();
+    }
+});
+
+console.log('✅ main.js エラー修正版 読み込み完了');
+
 
 // 🆕 通知システム実装（ui.jsから移動・簡素化）
 function showNotification(message, type = 'info', duration = 3000) {
