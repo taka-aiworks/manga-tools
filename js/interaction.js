@@ -919,7 +919,7 @@ function applyRecommendation() {
     }
 }
 
-// ===== キーボードショートカット =====
+// ===== キーボードショートカット（編集機能付き） =====
 function handleKeyDown(e) {
     // Ctrl/Cmd キーとの組み合わせ
     if (e.ctrlKey || e.metaKey) {
@@ -965,9 +965,34 @@ function handleKeyDown(e) {
                 toggleGuides();
             }
             break;
+            
+        // 🆕 吹き出し編集機能を追加
+        case 'e':
+            // E キーで選択された吹き出しを編集
+            if (selectedBubble) {
+                e.preventDefault();
+                const bubbleElement = document.querySelector(`[data-bubble-id="${selectedBubble.id}"]`);
+                if (bubbleElement) {
+                    console.log('⌨️ Eキーで編集開始:', selectedBubble.text);
+                    startBubbleEdit(bubbleElement, selectedBubble);
+                } else {
+                    console.warn('⚠️ 吹き出し要素が見つかりません');
+                }
+            } else {
+                console.log('ℹ️ 編集する吹き出しを選択してください');
+            }
+            break;
+            
+        case 'E':
+            // Shift+E で選択パネル内の全吹き出しを一括編集
+            if (e.shiftKey && selectedPanel) {
+                e.preventDefault();
+                console.log('⌨️ Shift+Eで一括編集:', selectedPanel.id);
+                editAllBubblesInPanel(selectedPanel.id);
+            }
+            break;
     }
 }
-
 // ===== 出力機能 =====
 function exportToClipStudio() {
     const projectData = {
