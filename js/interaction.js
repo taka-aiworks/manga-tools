@@ -514,47 +514,114 @@ function redo() {
     showNotification(`${operation.type}をやり直しました`, 'success', 2000);
 }
 
+// executeUndoOperation 関数を拡張
 function executeUndoOperation(operation) {
+    console.log('⏪ Undo実行:', operation.type);
+    
     switch (operation.type) {
         case 'split':
             panels = panels.filter(p => p.id !== operation.newPanelId);
             const originalPanel = panels.find(p => p.id === operation.originalPanel.id);
             if (originalPanel) Object.assign(originalPanel, operation.originalPanel);
             break;
+            
         case 'delete':
             panels.push(operation.originalPanel);
             characters.push(...(operation.originalElements.characters || []));
             speechBubbles.push(...(operation.originalElements.bubbles || []));
             break;
+            
         case 'duplicate':
             panels = panels.filter(p => p.id !== operation.newPanel.id);
             characters = characters.filter(c => c.panelId !== operation.newPanel.id);
             speechBubbles = speechBubbles.filter(b => b.panelId !== operation.newPanel.id);
             break;
+            
         case 'rotate':
             const panel = panels.find(p => p.id === operation.panelId);
             if (panel) Object.assign(panel, operation.originalPanel);
             break;
+            
+        // 新しい削除操作のUndo
+        case 'deleteCharacter':
+            console.log('👤 キャラクター削除をUndo:', operation.originalCharacter.name);
+            characters.push(operation.originalCharacter);
+            break;
+            
+        case 'deleteBubble':
+            console.log('💬 吹き出し削除をUndo:', operation.originalBubble.text);
+            speechBubbles.push(operation.originalBubble);
+            break;
+            
+        // キャラクター追加のUndo
+        case 'addCharacter':
+            console.log('👤 キャラクター追加をUndo:', operation.character.name);
+            characters = characters.filter(char => char.id !== operation.character.id);
+            break;
+            
+        // 吹き出し追加のUndo
+        case 'addBubble':
+            console.log('💬 吹き出し追加をUndo:', operation.bubble.text);
+            speechBubbles = speechBubbles.filter(bubble => bubble.id !== operation.bubble.id);
+            break;
+            
+        default:
+            console.warn('⚠️ 未知のUndo操作:', operation.type);
+            break;
     }
 }
 
+// executeRedoOperation 関数を拡張
 function executeRedoOperation(operation) {
+    console.log('⏩ Redo実行:', operation.type);
+    
     switch (operation.type) {
         case 'split':
             splitPanel(panels.find(p => p.id === operation.originalPanel.id), operation.direction);
             break;
+            
         case 'delete':
             deletePanel(panels.find(p => p.id === operation.originalPanel.id));
             break;
+            
         case 'duplicate':
             duplicatePanel(panels.find(p => p.id === operation.originalPanel.id));
             break;
+            
         case 'rotate':
             const panel = panels.find(p => p.id === operation.panelId);
             if (panel) Object.assign(panel, operation.newPanel);
             break;
+            
+        // 新しい削除操作のRedo
+        case 'deleteCharacter':
+            console.log('👤 キャラクター削除をRedo:', operation.originalCharacter.name);
+            characters = characters.filter(char => char.id !== operation.originalCharacter.id);
+            break;
+            
+        case 'deleteBubble':
+            console.log('💬 吹き出し削除をRedo:', operation.originalBubble.text);
+            speechBubbles = speechBubbles.filter(bubble => bubble.id !== operation.originalBubble.id);
+            break;
+            
+        // キャラクター追加のRedo
+        case 'addCharacter':
+            console.log('👤 キャラクター追加をRedo:', operation.character.name);
+            characters.push(operation.character);
+            break;
+            
+        // 吹き出し追加のRedo
+        case 'addBubble':
+            console.log('💬 吹き出し追加をRedo:', operation.bubble.text);
+            speechBubbles.push(operation.bubble);
+            break;
+            
+        default:
+            console.warn('⚠️ 未知のRedo操作:', operation.type);
+            break;
     }
 }
+
 
 // ===== 履歴付き操作関数 =====
 function splitPanelWithHistory(panel, direction) {
@@ -787,23 +854,57 @@ function updateCharacterSettings() {
     safeExecute('updateCharacterOverlay');
 }
 
+
+// interaction.js の deleteSelected 関数を履歴対応版に置き換えてください
+
 function deleteSelected() {
     if (selectedCharacter) {
         console.log('🗑️ キャラクター削除:', selectedCharacter.name);
+        
+        // 削除前の状態を保存
+        const originalCharacter = JSON.parse(JSON.stringify(selectedCharacter));
+        const panelId = selectedCharacter.panelId;
+        
+        // 削除実行
         characters = characters.filter(char => char.id !== selectedCharacter.id);
         selectedCharacter = null;
+        
+        // 履歴に追加
+        addToHistory({
+            type: 'deleteCharacter',
+            originalCharacter: originalCharacter,
+            panelId: panelId
+        });
+        
         safeExecute('updateCharacterOverlay');
         showNotification('キャラクターを削除しました', 'success', 2000);
+        
     } else if (selectedBubble) {
         console.log('🗑️ 吹き出し削除:', selectedBubble.text.substring(0, 10));
+        
+        // 削除前の状態を保存
+        const originalBubble = JSON.parse(JSON.stringify(selectedBubble));
+        const panelId = selectedBubble.panelId;
+        
+        // 削除実行
         speechBubbles = speechBubbles.filter(bubble => bubble.id !== selectedBubble.id);
         selectedBubble = null;
+        
+        // 履歴に追加
+        addToHistory({
+            type: 'deleteBubble',
+            originalBubble: originalBubble,
+            panelId: panelId
+        });
+        
         safeExecute('updateBubbleOverlay');
         showNotification('吹き出しを削除しました', 'success', 2000);
+        
     } else if (selectedPanel) {
         console.log('🗑️ パネル削除:', selectedPanel.id);
         deletePanelWithHistory(selectedPanel);
         return;
+        
     } else {
         console.log('❌ 削除対象が選択されていません');
         showNotification('削除する要素を選択してください', 'warning', 2000);
@@ -814,6 +915,7 @@ function deleteSelected() {
     updateStatus();
     updateElementCount();
 }
+
 
 // キーボードイベントの修正版
 // interaction.js の handleKeyDown 関数を以下に置き換えてください
