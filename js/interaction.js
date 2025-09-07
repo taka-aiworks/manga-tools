@@ -991,6 +991,38 @@ function handleKeyDown(e) {
                 editAllBubblesInPanel(selectedPanel.id);
             }
             break;
+
+            case 'h':
+            // H キーで横分割
+            if (selectedPanel) {
+                e.preventDefault();
+                splitPanel(selectedPanel, 'horizontal');
+            }
+            break;
+            
+            case 'v':
+                // V キーで縦分割
+                if (selectedPanel) {
+                    e.preventDefault();
+                    splitPanel(selectedPanel, 'vertical');
+                }
+                break;
+                
+            case 'd':
+                // D キーで複製
+                if (selectedPanel) {
+                    e.preventDefault();
+                    duplicatePanel(selectedPanel);
+                }
+                break;
+                
+            case 'r':
+                // R キーで回転
+                if (selectedPanel) {
+                    e.preventDefault();
+                    rotatePanel(selectedPanel);
+                }
+                break;
     }
 }
 // ===== 出力機能 =====
