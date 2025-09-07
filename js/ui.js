@@ -3,27 +3,22 @@
 function initializeUI() {
     console.log('🎨 UIモジュール初期化');
     setupTheme();
-    setupUIEventListeners();
+    setupPageManagement();
+    setupStatusUpdates();
+    setupAccessibility();
 }
 
-// ===== ダークモード機能 =====
+// ===== テーマ管理 =====
 function setupTheme() {
     console.log('🌙 テーマシステム初期化');
     
-    // ダークモードボタンのイベントリスナー
     const themeButton = document.getElementById('themeToggle');
     if (themeButton) {
         themeButton.addEventListener('click', toggleTheme);
         console.log('✅ ダークモードボタン設定完了');
-    } else {
-        console.warn('⚠️ ダークモードボタンが見つかりません');
     }
     
     // 初期テーマ適用
-    initTheme();
-}
-
-function initTheme() {
     const savedTheme = localStorage.getItem('theme') || 'light';
     console.log('🎨 保存済みテーマ:', savedTheme);
     applyTheme(savedTheme);
@@ -42,13 +37,11 @@ function toggleTheme() {
     localStorage.setItem('theme', newTheme);
     updateThemeButton(newTheme);
     
-    // キャンバス再描画（背景色変更のため）
-    if (typeof redrawCanvas === 'function') {
-        redrawCanvas();
-    }
-    if (typeof drawGuidelines === 'function') {
-        drawGuidelines();
-    }
+    // キャンバス再描画
+    safeExecute('redrawCanvas');
+    safeExecute('drawGuidelines');
+    
+    showNotification(`${newTheme === 'dark' ? 'ダーク' : 'ライト'}モードに切り替えました`, 'success', 2000);
 }
 
 function applyTheme(theme) {
@@ -57,14 +50,7 @@ function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     document.body.setAttribute('data-theme', theme);
     
-    // 強制的にスタイルを適用（確実性のため）
-    if (theme === 'dark') {
-        document.body.style.backgroundColor = '#1a1a1a';
-        document.body.style.color = '#e0e0e0';
-    } else {
-        document.body.style.backgroundColor = '#f0f0f0';
-        document.body.style.color = '#333';
-    }
+    // CSS変数で管理されているため、追加のスタイル設定は不要
 }
 
 function updateThemeButton(theme) {
@@ -80,18 +66,11 @@ function updateThemeButton(theme) {
     console.log('🔘 テーマボタン更新:', button.textContent);
 }
 
-// ===== UIイベントリスナー =====
-function setupUIEventListeners() {
-    console.log('🎛️ UIイベントリスナー設定');
+// ===== ページ管理 =====
+function setupPageManagement() {
+    console.log('📄 ページ管理システム初期化');
     
-    // ページタブ
-    setupPageTabs();
-    
-    // ステータス更新の定期実行
-    setInterval(updateUIStatus, 1000);
-}
-
-function setupPageTabs() {
+    // ページタブのイベント設定
     const pageTabs = document.querySelectorAll('.page-tab');
     const addPageBtn = document.getElementById('addPageBtn');
     
@@ -106,9 +85,10 @@ function setupPageTabs() {
     if (addPageBtn) {
         addPageBtn.addEventListener('click', addPage);
     }
+    
+    updatePageInfo();
 }
 
-// ===== ページ管理 =====
 function switchPage(pageNum) {
     currentPage = pageNum;
     
@@ -124,10 +104,8 @@ function switchPage(pageNum) {
         targetTab.classList.add('active');
     }
     
-    // ページ情報更新
     updatePageInfo();
-    
-    // TODO: 実際のページデータの保存・読み込み
+    showNotification(`ページ${pageNum}に切り替えました`, 'info', 1500);
 }
 
 function addPage() {
@@ -153,9 +131,7 @@ function addPage() {
     
     // 新しいページに切り替え
     switchPage(newPageNum);
-    
-    // ページ情報更新
-    updatePageInfo();
+    showNotification(`ページ${newPageNum}を追加しました`, 'success', 2000);
 }
 
 function updatePageInfo() {
@@ -167,74 +143,36 @@ function updatePageInfo() {
 }
 
 // ===== ステータス更新 =====
+function setupStatusUpdates() {
+    // 定期的なステータス更新
+    setInterval(updateUIStatus, 2000); // 2秒ごと
+}
+
 function updateUIStatus() {
-    // 要素数の更新
     updateElementCount();
-    
-    // 選択状態の更新
-    updateSelectionStatus();
-    
-    // パフォーマンス情報の更新
     updatePerformanceInfo();
 }
 
-function updateSelectionStatus() {
-    const selectedInfo = document.getElementById('selectedInfo');
-    if (!selectedInfo) return;
-    
-    if (selectedBubble) {
-        const shortText = selectedBubble.text.length > 15 
-            ? selectedBubble.text.substring(0, 15) + '...' 
-            : selectedBubble.text;
-        selectedInfo.textContent = `💬 吹き出し: ${shortText}`;
-    } else if (selectedCharacter) {
-        selectedInfo.textContent = `👤 キャラクター: ${selectedCharacter.name}`;
-    } else if (selectedPanel) {
-        selectedInfo.textContent = `📐 コマ${selectedPanel.id}`;
-    } else {
-        selectedInfo.textContent = 'コマを選択してください';
-    }
-}
-
 function updatePerformanceInfo() {
-    // メモリ使用量やレンダリング情報の表示（開発用）
-    if (window.performance && window.performance.memory) {
+    // メモリ使用量の監視（開発用）
+    if (window.performance && window.performance.memory && localStorage.getItem('debugMode') === 'true') {
         const memory = window.performance.memory;
         const memoryMB = (memory.usedJSHeapSize / 1024 / 1024).toFixed(1);
         
-        // デバッグ用（本番では非表示）
-        if (localStorage.getItem('debugMode') === 'true') {
-            console.log(`💾 メモリ使用量: ${memoryMB}MB`);
+        // 100MBを超えた場合の警告
+        if (memoryMB > 100) {
+            console.warn(`💾 メモリ使用量が高くなっています: ${memoryMB}MB`);
+            showNotification(`メモリ使用量: ${memoryMB}MB`, 'warning', 3000);
         }
     }
 }
 
-
-function createNotificationElement(message, type) {
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.innerHTML = `
-        <div class="notification-content">
-            <span class="notification-icon">${getNotificationIcon(type)}</span>
-            <span class="notification-message">${message}</span>
-        </div>
-    `;
-    
-    return notification;
-}
-
-function getNotificationIcon(type) {
-    const icons = {
-        'info': 'ℹ️',
-        'success': '✅',
-        'warning': '⚠️',
-        'error': '❌'
-    };
-    return icons[type] || icons.info;
-}
-
 // ===== モーダル管理 =====
 function showModal(title, content, buttons = []) {
+    // 既存のモーダルを削除
+    const existingModal = document.querySelector('.modal-overlay');
+    if (existingModal) existingModal.remove();
+    
     const modal = createModalElement(title, content, buttons);
     document.body.appendChild(modal);
     
@@ -251,7 +189,7 @@ function createModalElement(title, content, buttons) {
     modal.className = 'modal-overlay';
     
     const buttonsHtml = buttons.map(btn => 
-        `<button class="btn ${btn.class || 'btn-secondary'}" onclick="${btn.onclick}">${btn.text}</button>`
+        `<button class="btn ${btn.class || 'btn-secondary'}" onclick="${btn.onclick || 'closeModal(this)'}">${btn.text}</button>`
     ).join('');
     
     modal.innerHTML = `
@@ -278,11 +216,18 @@ function createModalElement(title, content, buttons) {
     };
     document.addEventListener('keydown', handleEsc);
     
+    // モーダル外クリックで閉じる
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal(modal.querySelector('.modal-close'));
+        }
+    });
+    
     return modal;
 }
 
 function closeModal(element) {
-    const modal = element.closest('.modal-overlay');
+    const modal = element ? element.closest('.modal-overlay') : document.querySelector('.modal-overlay');
     if (modal) {
         modal.classList.remove('show');
         setTimeout(() => {
@@ -290,51 +235,6 @@ function closeModal(element) {
                 modal.parentNode.removeChild(modal);
             }
         }, 300);
-    }
-}
-
-// ===== ツールチップ =====
-function initializeTooltips() {
-    const elementsWithTooltips = document.querySelectorAll('[data-tooltip]');
-    
-    elementsWithTooltips.forEach(element => {
-        element.addEventListener('mouseenter', showTooltip);
-        element.addEventListener('mouseleave', hideTooltip);
-    });
-}
-
-function showTooltip(e) {
-    const text = e.target.dataset.tooltip;
-    if (!text) return;
-    
-    const tooltip = document.createElement('div');
-    tooltip.className = 'tooltip';
-    tooltip.textContent = text;
-    document.body.appendChild(tooltip);
-    
-    // 位置調整
-    const rect = e.target.getBoundingClientRect();
-    tooltip.style.left = rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2) + 'px';
-    tooltip.style.top = rect.top - tooltip.offsetHeight - 10 + 'px';
-    
-    // アニメーション
-    setTimeout(() => {
-        tooltip.classList.add('show');
-    }, 10);
-    
-    e.target._tooltip = tooltip;
-}
-
-function hideTooltip(e) {
-    const tooltip = e.target._tooltip;
-    if (tooltip) {
-        tooltip.classList.remove('show');
-        setTimeout(() => {
-            if (tooltip.parentNode) {
-                tooltip.parentNode.removeChild(tooltip);
-            }
-        }, 200);
-        delete e.target._tooltip;
     }
 }
 
@@ -350,8 +250,8 @@ function showProgress(message, progress = 0) {
     const messageEl = progressBar.querySelector('.progress-message');
     const barEl = progressBar.querySelector('.progress-bar');
     
-    messageEl.textContent = message;
-    barEl.style.width = progress + '%';
+    if (messageEl) messageEl.textContent = message;
+    if (barEl) barEl.style.width = Math.min(100, Math.max(0, progress)) + '%';
     
     progressBar.classList.add('show');
     
@@ -391,8 +291,14 @@ function showShortcutHelp() {
     const shortcuts = [
         { key: 'Ctrl+S', description: 'プロジェクト保存' },
         { key: 'Ctrl+E', description: 'クリスタ用データ出力' },
+        { key: 'Ctrl+Z', description: '元に戻す' },
+        { key: 'Ctrl+Y', description: 'やり直し' },
         { key: 'Delete', description: '選択要素を削除' },
         { key: 'Escape', description: '選択解除' },
+        { key: 'H', description: 'パネル横分割' },
+        { key: 'V', description: 'パネル縦分割' },
+        { key: 'D', description: 'パネル複製' },
+        { key: 'R', description: 'パネル回転' },
         { key: 'G', description: 'ガイドライン表示切り替え' },
         { key: 'Shift+ドラッグ', description: 'パネル移動' }
     ];
@@ -406,61 +312,83 @@ function showShortcutHelp() {
                 </div>
             `).join('')}
         </div>
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 12px; color: #666;">
+            💡 ヒント: パネルを右クリックするとコンテキストメニューが表示されます
+        </div>
     `;
     
     showModal('⌨️ キーボードショートカット', content, [
-        { text: '閉じる', class: 'btn-primary', onclick: 'closeModal(this)' }
+        { text: '閉じる', class: 'btn-primary' }
     ]);
 }
 
 // ===== レスポンシブ対応 =====
 function handleResize() {
-    // キャンバスのサイズ調整
-    if (canvas && ctx) {
-        const container = canvas.parentElement;
-        const rect = container.getBoundingClientRect();
+    if (!canvas || !ctx) return;
+    
+    const container = canvas.parentElement;
+    if (!container) return;
+    
+    const rect = container.getBoundingClientRect();
+    
+    // 高DPI対応
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    
+    // ガイドキャンバスも同様に調整
+    if (guideCanvas && guideCtx) {
+        guideCanvas.width = rect.width * dpr;
+        guideCanvas.height = rect.height * dpr;
+        guideCtx.scale(dpr, dpr);
         
-        // 高DPI対応
-        const dpr = window.devicePixelRatio || 1;
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
-        ctx.scale(dpr, dpr);
-        
-        canvas.style.width = rect.width + 'px';
-        canvas.style.height = rect.height + 'px';
-        
-        // 再描画
-        if (typeof redrawCanvas === 'function') {
-            redrawCanvas();
-        }
+        guideCanvas.style.width = rect.width + 'px';
+        guideCanvas.style.height = rect.height + 'px';
     }
+    
+    // 再描画
+    safeExecute('redrawCanvas');
+    safeExecute('drawGuidelines');
+    
+    console.log('📏 キャンバスサイズ調整:', rect.width, 'x', rect.height);
 }
 
 // ===== アクセシビリティ =====
-function initializeAccessibility() {
+function setupAccessibility() {
+    console.log('♿ アクセシビリティ機能初期化');
+    
     // キーボードナビゲーション
     document.addEventListener('keydown', handleAccessibilityKeys);
     
     // フォーカス管理
     setupFocusManagement();
     
-    // ARIAラベルの動的更新
+    // ARIAラベルの更新
     updateAriaLabels();
 }
 
 function handleAccessibilityKeys(e) {
-    // Tab移動の改善
+    // Tabキーでのフォーカス移動を改善
     if (e.key === 'Tab') {
         const focusableElements = document.querySelectorAll(
-            'button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
         );
         
-        // カスタムTab順序の実装（必要に応じて）
+        // 現在のフォーカス要素のインデックスを取得
+        const currentIndex = Array.from(focusableElements).indexOf(document.activeElement);
+        
+        // 次の要素にフォーカス（必要に応じてカスタム順序を実装）
+        if (currentIndex >= 0) {
+            console.log('⌨️ Tab移動:', currentIndex, '→', e.shiftKey ? currentIndex - 1 : currentIndex + 1);
+        }
     }
 }
 
 function setupFocusManagement() {
-    // フォーカス可能な要素にスタイル適用
     const focusableElements = document.querySelectorAll(
         'button, input, select, textarea'
     );
@@ -480,17 +408,70 @@ function updateAriaLabels() {
     // 動的なARIAラベルの更新
     const canvas = document.getElementById('nameCanvas');
     if (canvas) {
+        const panelCount = panels?.length || 0;
+        const characterCount = characters?.length || 0;
+        const bubbleCount = speechBubbles?.length || 0;
+        
         canvas.setAttribute('aria-label', 
-            `ネーム制作キャンバス。現在${panels.length}個のコマ、${characters.length}個のキャラクター、${speechBubbles.length}個の吹き出しがあります。`
+            `ネーム制作キャンバス。現在${panelCount}個のコマ、${characterCount}個のキャラクター、${bubbleCount}個の吹き出しがあります。`
         );
+    }
+    
+    // 選択状態の通知
+    const selectedInfo = document.getElementById('selectedInfo');
+    if (selectedInfo) {
+        selectedInfo.setAttribute('aria-live', 'polite');
     }
 }
 
-// ===== 初期化とイベント設定 =====
+// ===== デバッグモード =====
+function toggleDebugMode() {
+    const isDebug = localStorage.getItem('debugMode') === 'true';
+    const newDebugState = !isDebug;
+    
+    localStorage.setItem('debugMode', newDebugState.toString());
+    
+    if (newDebugState) {
+        console.log('🔧 デバッグモード有効');
+        showNotification('デバッグモードを有効にしました', 'info', 2000);
+        
+        // デバッグ情報を表示
+        const debugInfo = safeExecute('showDebugStatus');
+        if (debugInfo) {
+            console.table(debugInfo);
+        }
+    } else {
+        console.log('🔧 デバッグモード無効');
+        showNotification('デバッグモードを無効にしました', 'info', 2000);
+    }
+}
+
+// ===== イベントリスナー設定 =====
 window.addEventListener('resize', handleResize);
+
+// DOMContentLoaded時の初期化
 document.addEventListener('DOMContentLoaded', () => {
-    initializeTooltips();
-    initializeAccessibility();
+    console.log('📋 DOM読み込み完了 - UI初期化');
+    
+    // 少し遅延させてUI初期化（他のモジュールの読み込み完了を待つ）
+    setTimeout(() => {
+        if (typeof initializeUI === 'function') {
+            initializeUI();
+        }
+    }, 100);
 });
+
+// ===== グローバル関数として公開 =====
+window.initializeUI = initializeUI;
+window.toggleTheme = toggleTheme;
+window.switchPage = switchPage;
+window.addPage = addPage;
+window.showModal = showModal;
+window.closeModal = closeModal;
+window.showProgress = showProgress;
+window.hideProgress = hideProgress;
+window.showShortcutHelp = showShortcutHelp;
+window.toggleDebugMode = toggleDebugMode;
+window.updateAriaLabels = updateAriaLabels;
 
 console.log('✅ ui.js 読み込み完了');
