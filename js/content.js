@@ -1,29 +1,4 @@
-// ===== コンテンツ管理モジュール（完全修正版） =====
-
-// ===== 選択関数をwindowオブジェクトに直接定義 =====
-window.selectCharacter = function(character) {
-    window.selectedCharacter = character;
-    window.selectedBubble = null;
-    window.selectedPanel = null;
-    window.selectedElement = character;
-    
-    window.safeExecute('updateCharacterOverlay');
-    window.safeExecute('updateStatus');
-    
-    console.log('👤 キャラクター選択:', character.name);
-};
-
-window.selectBubble = function(bubble) {
-    window.selectedBubble = bubble;
-    window.selectedCharacter = null;
-    window.selectedPanel = null;
-    window.selectedElement = bubble;
-    
-    window.safeExecute('updateBubbleOverlay');
-    window.safeExecute('updateStatus');
-    
-    console.log('💬 吹き出し選択:', bubble.text.substring(0, 15));
-};
+// ===== コンテンツ管理モジュール =====
 
 // ===== キャラクター管理 =====
 function addCharacter(type) {
@@ -241,8 +216,7 @@ function addCharacterEvents(element, character, panel) {
             selectedElement = null;
         }
         
-        // window経由で関数を呼び出し
-        window.selectCharacter(character);
+        selectCharacter(character);
         
         // コーナーハンドルクリック判定
         const rect = element.getBoundingClientRect();
@@ -298,7 +272,7 @@ function startCharacterResize(character, cornerType, e) {
     console.log('🔧 キャラクターリサイズ開始:', character.name, cornerType);
 }
 
-// ===== 吹き出し管理（修正版） =====
+// ===== 吹き出し管理 =====
 function addBubble(bubbleType) {
     if (!selectedPanel) {
         showNotification('まずコマを選択してください', 'warning', 2000);
@@ -477,8 +451,7 @@ function addBubbleEvents(element, bubble, panel) {
         e.stopPropagation();
         e.preventDefault();
         
-        // window経由で関数を呼び出し
-        window.selectBubble(bubble);
+        selectBubble(bubble);
         isDragging = true;
         selectedElement = bubble;
         
@@ -498,8 +471,7 @@ function addBubbleEvents(element, bubble, panel) {
         if (!editingInProgress) {
             console.log('💬 右クリック編集開始:', bubble.text);
             editingInProgress = true;
-            // 吹き出しを選択
-            window.selectBubble(bubble);
+            selectBubble(bubble);
             startBubbleEdit(element, bubble, () => {
                 editingInProgress = false;  // 編集完了時にフラグを解除
             });
@@ -515,8 +487,7 @@ function addBubbleEvents(element, bubble, panel) {
         if (!editingInProgress) {
             console.log('💬 ダブルクリック編集開始:', bubble.text);
             editingInProgress = true;
-            // 吹き出しを選択
-            window.selectBubble(bubble);
+            selectBubble(bubble);
             startBubbleEdit(element, bubble, () => {
                 editingInProgress = false;  // 編集完了時にフラグを解除
             });
@@ -525,14 +496,14 @@ function addBubbleEvents(element, bubble, panel) {
 }
 
 function startBubbleEdit(element, bubble, onComplete) {
-    window.selectBubble(bubble);
+    selectBubble(bubble);
     
     // 編集用のテキストエリアを作成
     const editArea = document.createElement('textarea');
     editArea.className = 'bubble-edit-area';
     editArea.value = bubble.text;
     
-    // 書字方向切り替えボタン（横書き/縦書きの順番を変更）
+    // 書字方向切り替えボタン
     const verticalToggle = document.createElement('button');
     verticalToggle.className = 'vertical-toggle-btn';
     verticalToggle.textContent = bubble.vertical ? '横書き' : '縦書き';
@@ -619,8 +590,8 @@ function startBubbleEdit(element, bubble, onComplete) {
         // 元の要素を復元（ホバー状態をクリア）
         element.style.opacity = '';
         element.style.pointerEvents = '';
-        element.style.filter = '';  // ホバーエフェクトをクリア
-        element.classList.remove('hover');  // ホバークラスを削除
+        element.style.filter = '';
+        element.classList.remove('hover');
         
         // 表示を更新
         updateBubbleOverlay();
@@ -650,7 +621,7 @@ function startBubbleEdit(element, bubble, onComplete) {
                 editContainer.parentNode.removeChild(editContainer);
             }
             
-            // 元の要素を復元（ホバー状態をクリア）
+            // 元の要素を復元
             element.style.opacity = '';
             element.style.pointerEvents = '';
             element.style.filter = '';
@@ -665,10 +636,8 @@ function startBubbleEdit(element, bubble, onComplete) {
     
     // フォーカスが外れたら確定
     editArea.addEventListener('blur', function(e) {
-        // ボタンへのフォーカス移動の場合は確定しない
         if (!e.relatedTarget || !e.relatedTarget.classList.contains('vertical-toggle-btn')) {
             setTimeout(() => {
-                // 少し遅延させて、ボタンクリックとの競合を回避
                 if (document.contains(editArea)) {
                     finishEdit();
                 }
@@ -693,6 +662,31 @@ function adjustBubbleSize(bubble) {
     }
     
     console.log(`📏 吹き出しサイズ調整: ${bubble.width}x${bubble.height} (${textLength}文字, ${bubble.vertical ? '縦書き' : '横書き'})`);
+}
+
+// ===== 選択関数 =====
+function selectCharacter(character) {
+    selectedCharacter = character;
+    selectedBubble = null;
+    selectedPanel = null;
+    selectedElement = character;
+    
+    safeExecute('updateCharacterOverlay');
+    safeExecute('updateStatus');
+    
+    console.log('👤 キャラクター選択:', character.name);
+}
+
+function selectBubble(bubble) {
+    selectedBubble = bubble;
+    selectedCharacter = null;
+    selectedPanel = null;
+    selectedElement = bubble;
+    
+    safeExecute('updateBubbleOverlay');
+    safeExecute('updateStatus');
+    
+    console.log('💬 吹き出し選択:', bubble.text.substring(0, 15));
 }
 
 // ===== シーン分析 =====
@@ -781,9 +775,6 @@ function getContentStats() {
 }
 
 // ===== グローバル関数として公開 =====
-window.addCharacterResizeHandles = addCharacterResizeHandles;
-
-console.log('✅ content.js 読み込み完了（完全修正版 - 関数スコープ修正、縦書きデフォルト、リサイズ機能）'); = addCharacter;
 window.addCharacter = addCharacter;
 window.applyCharacterLayout = applyCharacterLayout;
 window.updateCharacterOverlay = updateCharacterOverlay;
@@ -796,3 +787,7 @@ window.getElementsInPanel = getElementsInPanel;
 window.getContentStats = getContentStats;
 window.startCharacterResize = startCharacterResize;
 window.addCharacterResizeHandles = addCharacterResizeHandles;
+window.selectCharacter = selectCharacter;
+window.selectBubble = selectBubble;
+
+console.log('✅ content.js 読み込み完了（完全修正版 - 元ファイルベース＋必要修正のみ）');
