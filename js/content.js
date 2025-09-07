@@ -229,6 +229,7 @@ function addCharacterMoveEvents(element, character, panel) {
 }
 
 // ===== 吹き出し管理 =====
+// 🔄 addBubble関数の強化（縦書き対応）
 function addBubble(bubbleType) {
     if (!selectedPanel) {
         alert('❌ まずコマを選択してください');
@@ -251,7 +252,8 @@ function addBubble(bubbleType) {
         y: 0.3,
         scale: 1.0,
         width: Math.max(60, dialogueText.length * 8 + 20),
-        height: 40
+        height: 40,
+        vertical: false // 🆕 縦書きフラグ
     };
     
     speechBubbles.push(bubble);
@@ -267,6 +269,43 @@ function addBubble(bubbleType) {
     
     console.log('💬 吹き出し追加:', bubbleType, bubble.text);
 }
+
+
+// 🆕 縦書き切り替え機能の追加
+function toggleBubbleVertical(bubble) {
+    bubble.vertical = !bubble.vertical;
+    
+    // サイズを調整
+    if (bubble.vertical) {
+        adjustBubbleSizeVertical(bubble);
+    } else {
+        adjustBubbleSize(bubble);
+    }
+    
+    updateBubbleOverlay();
+    updateStatus();
+    
+    console.log(`📝 吹き出し${bubble.id}の縦書き切り替え:`, bubble.vertical);
+    showNotification(`吹き出しを${bubble.vertical ? '縦書き' : '横書き'}に変更しました`, 'success', 2000);
+}
+
+// 🆕 吹き出し選択時の詳細表示
+function showBubbleDetails(bubble) {
+    const details = {
+        id: bubble.id,
+        text: bubble.text,
+        type: bubble.type,
+        size: `${bubble.width}x${bubble.height}`,
+        scale: bubble.scale.toFixed(2),
+        position: `(${bubble.x.toFixed(2)}, ${bubble.y.toFixed(2)})`,
+        vertical: bubble.vertical ? '縦書き' : '横書き'
+    };
+    
+    console.table(details);
+    
+    updateSelectionStatus(`吹き出し「${bubble.text.substring(0, 15)}${bubble.text.length > 15 ? '...' : ''}」選択中 (${bubble.vertical ? '縦書き' : '横書き'})`);
+}
+
 
 function autoPlaceBubbles() {
     if (!selectedPanel) {
@@ -295,6 +334,7 @@ function autoPlaceBubbles() {
     updateBubbleOverlay();
 }
 
+// 🔄 updateBubbleOverlay関数の強化版（完全置き換え）
 function updateBubbleOverlay() {
     const overlay = document.getElementById('bubbleOverlay');
     if (!overlay) return;
@@ -307,8 +347,24 @@ function updateBubbleOverlay() {
         
         const element = createBubbleElement(bubble, panel);
         overlay.appendChild(element);
+        
+        // 選択された吹き出しのみリサイズハンドルを表示
+        if (selectedBubble === bubble) {
+            const handles = element.querySelectorAll('.bubble-resize-handle');
+            handles.forEach(handle => {
+                handle.style.display = 'block';
+            });
+        } else {
+            const handles = element.querySelectorAll('.bubble-resize-handle');
+            handles.forEach(handle => {
+                handle.style.display = 'none';
+            });
+        }
     });
 }
+
+
+
 
 // ===== content.jsのcreateBubbleElement関数を以下に置き換えてください =====
 
@@ -695,12 +751,128 @@ function addBubbleEditEvents(element, bubble, panel) {
 }
 
 
+
 // 🔄 addBubbleDragEvents関数を簡素化（重複を避けるため）
 function addBubbleDragEvents(element, bubble, panel) {
     // この関数は現在addBubbleEditEventsに統合されているため、
     // 空の関数にするか、削除してください
     console.log('💬 ドラッグイベントはaddBubbleEditEventsに統合済み');
 }
+
+// 🔄 selectBubble関数の強化
+function selectBubble(bubble) {
+    selectedBubble = bubble;
+    selectedCharacter = null;
+    selectedPanel = null;
+    selectedElement = bubble;
+    
+    updateBubbleOverlay();
+    updateControlsFromElement();
+    updateStatus();
+    showBubbleDetails(bubble);
+    
+    console.log('💬 吹き出し選択:', bubble.text.substring(0, 15));
+}
+
+// 🆕 一括縦書き変換
+function toggleAllBubblesVertical(panelId) {
+    const panelBubbles = speechBubbles.filter(b => b.panelId === panelId);
+    
+    if (panelBubbles.length === 0) {
+        alert('❌ このパネルには吹き出しがありません');
+        return;
+    }
+    
+    const shouldVertical = confirm('このパネルの全吹き出しを縦書きにしますか？\n（キャンセルで横書きに統一）');
+    
+    panelBubbles.forEach(bubble => {
+        bubble.vertical = shouldVertical;
+        
+        if (bubble.vertical) {
+            adjustBubbleSizeVertical(bubble);
+        } else {
+            adjustBubbleSize(bubble);
+        }
+    });
+    
+    updateBubbleOverlay();
+    updateStatus();
+    
+    const mode = shouldVertical ? '縦書き' : '横書き';
+    console.log(`📝 パネル${panelId}の全吹き出しを${mode}に変更`);
+    showNotification(`パネル${panelId}の${panelBubbles.length}個の吹き出しを${mode}に変更しました`, 'success', 3000);
+}
+
+// 🆕 吹き出しコピー機能
+function copyBubble(bubble) {
+    const newBubble = {
+        ...bubble,
+        id: `bubble_${Date.now()}_copy`,
+        x: bubble.x + 0.1,
+        y: bubble.y + 0.1
+    };
+    
+    // 画面内に収まるように調整
+    if (newBubble.x > 0.9) newBubble.x = 0.1;
+    if (newBubble.y > 0.9) newBubble.y = 0.1;
+    
+    speechBubbles.push(newBubble);
+    updateBubbleOverlay();
+    updateElementCount();
+    
+    console.log('📋 吹き出しコピー:', bubble.text);
+    showNotification('吹き出しをコピーしました', 'success', 2000);
+}
+
+// 🆕 吹き出し削除（履歴付き）
+function deleteBubbleWithHistory(bubble) {
+    const confirmMessage = `吹き出し「${bubble.text}」を削除しますか？`;
+    
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    // 履歴に追加
+    addToHistory({
+        type: 'delete_bubble',
+        bubble: JSON.parse(JSON.stringify(bubble))
+    });
+    
+    // 削除実行
+    speechBubbles = speechBubbles.filter(b => b.id !== bubble.id);
+    
+    // 選択状態をクリア
+    if (selectedBubble === bubble) {
+        clearSelection();
+    }
+    
+    updateBubbleOverlay();
+    updateElementCount();
+    
+    console.log('🗑️ 吹き出し削除:', bubble.text);
+    showNotification('吹き出しを削除しました', 'success', 2000);
+}
+
+// 🆕 デバッグ用関数
+function debugBubbles() {
+    console.log('🔍 吹き出しデバッグ情報:');
+    console.log('総数:', speechBubbles.length);
+    console.log('選択中:', selectedBubble?.text || 'なし');
+    console.log('リサイズ中:', isBubbleResizing);
+    
+    speechBubbles.forEach((bubble, index) => {
+        console.log(`${index + 1}. ID:${bubble.id}, テキスト:"${bubble.text}", 縦書き:${bubble.vertical}, サイズ:${bubble.width}x${bubble.height}`);
+    });
+}
+
+// 🆕 グローバル関数として追加
+window.debugBubbles = debugBubbles;
+window.toggleAllBubblesVertical = toggleAllBubblesVertical;
+window.copyBubble = copyBubble;
+
+console.log('✅ main.js - 吹き出し機能強化版 読み込み完了');
+console.log('🔧 新機能: 縦書き対応、リサイズ、コピー、一括変換');
+
 
 // 🆕 強制的にダブルクリック編集を実行する関数（デバッグ用）
 window.forceEditBubble = function(bubbleId) {
