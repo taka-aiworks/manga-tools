@@ -1,18 +1,21 @@
 // interaction.jsに以下の関数を追加：
 
-// リサイズ開始
-// リサイズ開始
+// 🔄 置き換え：startResize関数
 function startResize(e, character, position) {
     console.log('🔄 リサイズ開始:', character.name, position);
     
     e.preventDefault();
     e.stopPropagation();
+    e.stopImmediatePropagation(); // 追加：より強力な伝播防止
     
     isResizing = true;
     selectedElement = character;
     selectedCharacter = character;
     
-    // より正確な座標取得
+    // ページ保護モードを有効化
+    document.body.classList.add('resize-mode');
+    document.documentElement.style.overflow = 'hidden';
+    
     const rect = canvas.getBoundingClientRect();
     const coords = {
         x: e.clientX - rect.left,
@@ -20,10 +23,8 @@ function startResize(e, character, position) {
     };
     
     const panel = panels.find(p => p.id === character.panelId);
-    
     if (!panel) return;
     
-    // リサイズ開始時の情報を保存
     resizeStartData = {
         character: character,
         position: position,
@@ -35,26 +36,45 @@ function startResize(e, character, position) {
         panel: panel
     };
     
-    // body全体でマウスイベントを監視（より確実）
-    document.body.addEventListener('mousemove', handleResize, { passive: false });
-    document.body.addEventListener('mouseup', endResize, { passive: false });
+    // document全体でマウスイベントを監視（最優先）
+    document.addEventListener('mousemove', handleResize, { 
+        passive: false, 
+        capture: true 
+    });
+    document.addEventListener('mouseup', endResize, { 
+        passive: false, 
+        capture: true 
+    });
     
-    // ページの選択を無効化（ドラッグ中のテキスト選択を防ぐ）
-    document.body.style.userSelect = 'none';
-    document.body.style.webkitUserSelect = 'none';
+    // スクロール防止
+    window.addEventListener('scroll', preventScroll, { passive: false });
     
-    console.log('🎯 リサイズ開始座標:', coords);
+    console.log('🎯 リサイズ開始 - ページ保護モード有効');
+}
+
+// 🆕 新規追加：スクロール防止関数
+function preventScroll(e) {
+    if (isResizing) {
+        e.preventDefault();
+        return false;
+    }
 }
 
 
-// リサイズ処理
+
+// 🔄 置き換え：handleResize関数
 function handleResize(e) {
     if (!isResizing || !resizeStartData.character) return;
     
-    e.preventDefault(); // ページスクロールを防ぐ
+    e.preventDefault();
     e.stopPropagation();
+    e.stopImmediatePropagation();
     
-    // より正確な座標取得
+    // スクロール位置固定
+    if (window.scrollX !== 0 || window.scrollY !== 0) {
+        window.scrollTo(0, 0);
+    }
+    
     const rect = canvas.getBoundingClientRect();
     const coords = {
         x: e.clientX - rect.left,
@@ -62,105 +82,157 @@ function handleResize(e) {
     };
     
     const data = resizeStartData;
-    
-    // マウスの移動量を計算
     const deltaX = coords.x - data.startX;
     const deltaY = coords.y - data.startY;
     
-    // スケール変化量の計算（より細かく調整）
     let scaleChange = 0;
     let positionChangeX = 0;
     let positionChangeY = 0;
     
-    // 感度を下げて、より細かい調整を可能に
-    const sensitivity = 0.003; // 感度を下げる
+    const sensitivity = 0.002; // 感度を下げる
     
     switch (data.position) {
         case 'bottom-right':
             scaleChange = (deltaX + deltaY) * sensitivity;
             break;
-            
         case 'top-left':
             scaleChange = -(deltaX + deltaY) * sensitivity;
-            positionChangeX = deltaX / data.panel.width * 0.5; // 位置変更の感度も下げる
-            positionChangeY = deltaY / data.panel.height * 0.5;
+            positionChangeX = deltaX / data.panel.width * 0.3;
+            positionChangeY = deltaY / data.panel.height * 0.3;
             break;
-            
         case 'top-right':
             scaleChange = (deltaX - deltaY) * sensitivity;
-            positionChangeY = deltaY / data.panel.height * 0.5;
+            positionChangeY = deltaY / data.panel.height * 0.3;
             break;
-            
         case 'bottom-left':
             scaleChange = (-deltaX + deltaY) * sensitivity;
-            positionChangeX = deltaX / data.panel.width * 0.5;
+            positionChangeX = deltaX / data.panel.width * 0.3;
             break;
-            
         case 'right':
             scaleChange = deltaX * sensitivity;
             break;
-            
         case 'left':
             scaleChange = -deltaX * sensitivity;
-            positionChangeX = deltaX / data.panel.width * 0.5;
+            positionChangeX = deltaX / data.panel.width * 0.3;
             break;
-            
         case 'bottom':
             scaleChange = deltaY * sensitivity;
             break;
-            
         case 'top':
             scaleChange = -deltaY * sensitivity;
-            positionChangeY = deltaY / data.panel.height * 0.5;
+            positionChangeY = deltaY / data.panel.height * 0.3;
             break;
     }
     
-    // 新しいスケールを計算（より細かい制限）
-    const newScale = Math.max(0.2, Math.min(5.0, data.startScale + scaleChange));
-    
-    // 新しい位置を計算（パネル内制限）
+    const newScale = Math.max(0.2, Math.min(3.0, data.startScale + scaleChange));
     const newX = Math.max(0.05, Math.min(0.95, data.startCharX + positionChangeX));
     const newY = Math.max(0.05, Math.min(0.95, data.startCharY + positionChangeY));
     
-    // キャラクターの値を更新
     data.character.scale = newScale;
     data.character.x = newX;
     data.character.y = newY;
     
-    // 表示更新
     updateCharacterOverlay();
     updateControlsFromElement();
     
-    console.log('🔄 リサイズ中:', {
-        scale: newScale.toFixed(3),
-        position: data.position,
-        delta: `${deltaX.toFixed(1)},${deltaY.toFixed(1)}`
-    });
+    return false;
 }
 
 
-// リサイズ終了
+// 🔄 置き換え：endResize関数
 function endResize(e) {
     if (!isResizing) return;
     
-    console.log('🔄 リサイズ終了');
+    console.log('🔄 リサイズ終了 - ページ保護モード解除');
     
     isResizing = false;
     resizeStartData = {};
     
+    // ページ保護モードを解除
+    document.body.classList.remove('resize-mode');
+    document.documentElement.style.overflow = '';
+    
     // イベントリスナーを削除
-    document.body.removeEventListener('mousemove', handleResize);
-    document.body.removeEventListener('mouseup', endResize);
-    document.removeEventListener('mousemove', handleResize);
-    document.removeEventListener('mouseup', endResize);
+    document.removeEventListener('mousemove', handleResize, { capture: true });
+    document.removeEventListener('mouseup', endResize, { capture: true });
+    window.removeEventListener('scroll', preventScroll);
     
-    // ページの選択を復元
-    document.body.style.userSelect = '';
-    document.body.style.webkitUserSelect = '';
-    
-    // スライダーと同期
     updateControlsFromElement();
+    window.scrollTo(0, 0);
 }
+
+
+// 🆕 新規追加：吹き出しドラッグイベント追加
+function addBubbleDragEvents(element, bubble, panel) {
+    let clickCount = 0;
+    
+    element.addEventListener('mousedown', function(e) {
+        clickCount++;
+        console.log('💬 吹き出しクリック:', bubble.text.substring(0, 10));
+        
+        e.stopPropagation();
+        e.preventDefault();
+        
+        setTimeout(() => { clickCount = 0; }, 200);
+        
+        if (clickCount > 1) return;
+        if (isDragging) return;
+        
+        selectBubble(bubble);
+        
+        isDragging = true;
+        selectedElement = bubble;
+        
+        const coords = getCanvasCoordinates(e);
+        dragOffset.x = coords.x - (panel.x + panel.width * bubble.x);
+        dragOffset.y = coords.y - (panel.y + panel.height * bubble.y);
+        
+        console.log('🚀 吹き出しドラッグ開始');
+    });
+    
+    element.addEventListener('dblclick', function(e) {
+        console.log('💬 ダブルクリック - ドラッグ強制終了');
+        e.stopPropagation();
+        isDragging = false;
+        selectedElement = null;
+    });
+}
+
+// 🆕 新規追加：吹き出し選択関数
+function selectBubble(bubble) {
+    selectedBubble = bubble;
+    selectedCharacter = null;
+    selectedPanel = null;
+    selectedElement = bubble;
+    updateBubbleOverlay();
+    updateControlsFromElement();
+    updateStatus();
+    
+    console.log('💬 吹き出し選択:', bubble.text.substring(0, 15));
+}
+
+// 🆕 新規追加：強制ドラッグ終了
+window.forceEndDrag = function() {
+    console.log('🛑 強制ドラッグ終了');
+    isDragging = false;
+    selectedElement = null;
+    isResizing = false;
+    resizeStartData = {};
+    
+    document.body.classList.remove('resize-mode');
+    document.documentElement.style.overflow = '';
+    
+    document.removeEventListener('mousemove', handleResize, { capture: true });
+    document.removeEventListener('mouseup', endResize, { capture: true });
+    window.removeEventListener('scroll', preventScroll);
+};
+
+// 🆕 新規追加：ESCキーで強制終了
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && (isDragging || isResizing)) {
+        window.forceEndDrag();
+    }
+});
 
 
 
