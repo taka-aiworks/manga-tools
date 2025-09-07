@@ -11,6 +11,9 @@ let isDragging = false;
 let dragOffset = {x: 0, y: 0};
 let currentPage = 1;
 let currentScene = 'daily';
+// main.jsのグローバル変数に追加
+let isResizing = false;
+let resizeStartData = {};
 
 // ===== テンプレート定義 =====
 const templates = {
