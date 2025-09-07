@@ -670,5 +670,32 @@ window.analyzeScene = analyzeScene;
 window.applyRecommendation = applyRecommendation;
 window.getElementsInPanel = getElementsInPanel;
 window.getContentStats = getContentStats;
+window.startCharacterResize = startCharacterResize;
+window.addCharacterResizeHandles = addCharacterResizeHandles;
 
-console.log('✅ content.js 読み込み完了（修正版 - 縦書きデフォルト、編集機能修正）');
+// 選択関数も公開（エラー回避のため）
+window.selectCharacter = function(character) {
+    selectedCharacter = character;
+    selectedBubble = null;
+    selectedPanel = null;
+    selectedElement = character;
+    
+    updateCharacterOverlay();
+    updateStatus();
+    
+    console.log('👤 キャラクター選択:', character.name);
+};
+
+window.selectBubble = function(bubble) {
+    selectedBubble = bubble;
+    selectedCharacter = null;
+    selectedPanel = null;
+    selectedElement = bubble;
+    
+    updateBubbleOverlay();
+    updateStatus();
+    
+    console.log('💬 吹き出し選択:', bubble.text.substring(0, 15));
+};
+
+console.log('✅ content.js 読み込み完了（修正版 - 縦書きデフォルト、編集機能修正、リサイズ機能追加）');
