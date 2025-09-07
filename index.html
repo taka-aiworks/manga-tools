@@ -1,12 +1,18 @@
 <!DOCTYPE html>
 <html lang="ja">
-    <!-- 既存のヘッダー内容の後に以下を追加 -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📚 ネーム制作支援ツール</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="light">
+    <!-- ヘッダー -->
     <div class="header">
         <h1>📚 ネーム制作支援ツール</h1>
         <p>コマ割り・キャラ配置・セリフを統合した漫画ネーム作成ツール</p>
-        <link rel="stylesheet" href="style.css">
         
-        <!-- 🆕 操作ボタンエリア追加 -->
+        <!-- 操作ボタンエリア -->
         <div class="header-controls">
             <div class="undo-redo-group">
                 <button id="undoBtn" class="control-btn undo-btn" disabled title="元に戻す (Ctrl+Z)">
@@ -30,20 +36,21 @@
         </div>
     </div>
 
-　    　<!-- 🆕 操作状況表示バー -->
-        <div class="operation-status">
-            <div class="status-left">
-                <span id="operationStatus">準備完了</span>
-                <span id="historyStatus">履歴: 0/0</span>
-            </div>
-            <div class="status-right">
-                <span id="selectionStatus">何も選択されていません</span>
-            </div>
+    <!-- 操作状況表示バー -->
+    <div class="operation-status">
+        <div class="status-left">
+            <span id="operationStatus">準備完了</span>
+            <span id="historyStatus">履歴: 0/0</span>
         </div>
-            
+        <div class="status-right">
+            <span id="selectionStatus">何も選択されていません</span>
+        </div>
+    </div>
+    
     <div class="container">
         <!-- 左パネル：ストーリー構成 -->
         <div class="story-panel">
+            <!-- ストーリー構成 -->
             <div class="section">
                 <h3>📖 ストーリー構成</h3>
                 <div class="story-timeline">
@@ -55,10 +62,11 @@
                 <textarea placeholder="プロット・あらすじを入力..." class="plot-input"></textarea>
             </div>
             
+            <!-- シーン選択 -->
             <div class="section">
                 <h3>🎭 シーン選択</h3>
                 <div class="scene-buttons">
-                    <div class="scene-btn" data-scene="daily">🌸 日常シーン</div>
+                    <div class="scene-btn active" data-scene="daily">🌸 日常シーン</div>
                     <div class="scene-btn" data-scene="dialogue">💬 会話シーン</div>
                     <div class="scene-btn" data-scene="action">⚡ アクションシーン</div>
                     <div class="scene-btn" data-scene="emotional">😢 感情シーン</div>
@@ -68,12 +76,11 @@
                 <div id="sceneRecommendation" class="recommendation-panel" style="display:none;">
                     <h4>📋 推奨レイアウト</h4>
                     <div id="recommendationContent"></div>
-                    <button id="applyRecommendation" class="btn btn-primary">
-                        ✨ 適用
-                    </button>
+                    <button id="applyRecommendation" class="btn btn-primary">✨ 適用</button>
                 </div>
             </div>
             
+            <!-- ページ管理 -->
             <div class="section">
                 <h3>📄 ページ管理</h3>
                 <div class="page-tabs">
@@ -81,9 +88,7 @@
                     <button class="page-tab" data-page="2">P2</button>
                     <button class="page-tab" id="addPageBtn">+</button>
                 </div>
-                <div class="page-info">
-                    現在: 1ページ目 / 全2ページ
-                </div>
+                <div class="page-info">現在: 1ページ目 / 全2ページ</div>
             </div>
         </div>
         
@@ -104,42 +109,42 @@
         
         <!-- 右パネル：制作ツール -->
         <div class="tools-panel">
-            <!-- コマ割りテンプレート -->
-                <div class="section">
-                    <h3>🎬 シーンテンプレート</h3>
-                    <div class="template-grid">
-                        <div class="template-card active" data-template="4koma">
-                            <div class="template-title">4コマ</div>
-                            <div class="template-desc">基本構成</div>
-                        </div>
-                        <div class="template-card" data-template="dialogue">
-                            <div class="template-title">会話</div>
-                            <div class="template-desc">2人の対話</div>
-                        </div>
-                        <div class="template-card" data-template="action">
-                            <div class="template-title">アクション</div>
-                            <div class="template-desc">動きのシーン</div>
-                        </div>
-                        <div class="template-card" data-template="emotional">
-                            <div class="template-title">感情</div>
-                            <div class="template-desc">表情重視</div>
-                        </div>
-                        <div class="template-card" data-template="gag">
-                            <div class="template-title">ギャグ</div>
-                            <div class="template-desc">5コマ構成</div>
-                        </div>
-                        <div class="template-card" data-template="custom">
-                            <div class="template-title">カスタム</div>
-                            <div class="template-desc">自由作成</div>
-                        </div>
+            <!-- シーンテンプレート -->
+            <div class="section">
+                <h3>🎬 シーンテンプレート</h3>
+                <div class="template-grid">
+                    <div class="template-card active" data-template="4koma">
+                        <div class="template-title">4コマ</div>
+                        <div class="template-desc">基本構成</div>
                     </div>
-                    
-                    <div class="template-info">
-                        <div style="font-size: 10px; color: #666; margin-top: 8px;">
-                            📝 テンプレートには、コマ割り・キャラ配置・セリフがセットで含まれています
-                        </div>
+                    <div class="template-card" data-template="dialogue">
+                        <div class="template-title">会話</div>
+                        <div class="template-desc">2人の対話</div>
+                    </div>
+                    <div class="template-card" data-template="action">
+                        <div class="template-title">アクション</div>
+                        <div class="template-desc">動きのシーン</div>
+                    </div>
+                    <div class="template-card" data-template="emotional">
+                        <div class="template-title">感情</div>
+                        <div class="template-desc">表情重視</div>
+                    </div>
+                    <div class="template-card" data-template="gag">
+                        <div class="template-title">ギャグ</div>
+                        <div class="template-desc">5コマ構成</div>
+                    </div>
+                    <div class="template-card" data-template="custom">
+                        <div class="template-title">カスタム</div>
+                        <div class="template-desc">自由作成</div>
                     </div>
                 </div>
+                
+                <div class="template-info">
+                    <div style="font-size: 10px; color: #666; margin-top: 8px;">
+                        📝 テンプレートには、コマ割り・キャラ配置・セリフがセットで含まれています
+                    </div>
+                </div>
+            </div>
             
             <!-- キャラ配置 -->
             <div class="section">
@@ -186,85 +191,85 @@
                 </div>
             </div>
             
-            <!-- 詳細調整セクション -->
-                <div class="section">
-                    <h3>🎛️ 詳細調整</h3>
-                    <div class="controls">
-                        <div class="control-group">
-                            <label>サイズ:</label>
-                            <input type="range" id="elementScale" min="0.3" max="2.0" step="0.1" value="1.0">
-                        </div>
-                        <div class="control-group">
-                            <label>横位置:</label>
-                            <input type="range" id="elementX" min="0" max="1" step="0.05" value="0.5">
-                        </div>
-                        <div class="control-group">
-                            <label>縦位置:</label>
-                            <input type="range" id="elementY" min="0" max="1" step="0.05" value="0.5">
-                        </div>
+            <!-- 詳細調整 -->
+            <div class="section">
+                <h3>🎛️ 詳細調整</h3>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>サイズ:</label>
+                        <input type="range" id="elementScale" min="0.3" max="2.0" step="0.1" value="1.0">
+                    </div>
+                    <div class="control-group">
+                        <label>横位置:</label>
+                        <input type="range" id="elementX" min="0" max="1" step="0.05" value="0.5">
+                    </div>
+                    <div class="control-group">
+                        <label>縦位置:</label>
+                        <input type="range" id="elementY" min="0" max="1" step="0.05" value="0.5">
+                    </div>
+                    
+                    <!-- キャラクター設定 -->
+                    <div id="characterSettings" style="display:none;">
+                        <hr style="margin: 10px 0; border-color: #ddd;">
+                        <h4 style="font-size: 12px; margin-bottom: 6px;">👤 キャラクター設定</h4>
                         
-                        <!-- 新規追加：キャラクター設定 -->
-                        <div id="characterSettings" style="display:none;">
-                            <hr style="margin: 10px 0; border-color: #ddd;">
-                            <h4 style="font-size: 12px; margin-bottom: 6px;">👤 キャラクター設定</h4>
-                            
-                            <div class="control-group">
-                                <label>向き:</label>
-                                <select id="characterFacing">
-                                    <option value="front">正面</option>
-                                    <option value="left">左向き</option>
-                                    <option value="right">右向き</option>
-                                    <option value="back">後ろ向き</option>
-                                </select>
-                            </div>
-                            
-                            <div class="control-group">
-                                <label>視線:</label>
-                                <select id="characterGaze">
-                                    <option value="center">中央</option>
-                                    <option value="left">左</option>
-                                    <option value="right">右</option>
-                                    <option value="up">上</option>
-                                    <option value="down">下</option>
-                                </select>
-                            </div>
-                            
-                            <div class="control-group">
-                                <label>ポーズ:</label>
-                                <select id="characterPose">
-                                    <option value="standing">立ち</option>
-                                    <option value="sitting">座り</option>
-                                    <option value="walking">歩き</option>
-                                    <option value="running">走り</option>
-                                    <option value="pointing">指差し</option>
-                                </select>
-                            </div>
-                            
-                            <div class="control-group">
-                                <label>表情:</label>
-                                <select id="characterExpression">
-                                    <option value="neutral">普通</option>
-                                    <option value="happy">笑顔</option>
-                                    <option value="sad">悲しい</option>
-                                    <option value="angry">怒り</option>
-                                    <option value="surprised">驚き</option>
-                                </select>
-                            </div>
+                        <div class="control-group">
+                            <label>向き:</label>
+                            <select id="characterFacing">
+                                <option value="front">正面</option>
+                                <option value="left">左向き</option>
+                                <option value="right">右向き</option>
+                                <option value="back">後ろ向き</option>
+                            </select>
                         </div>
                         
                         <div class="control-group">
-                            <label>要素:</label>
-                            <select id="elementType">
-                                <option value="character">キャラクター</option>
-                                <option value="bubble">吹き出し</option>
+                            <label>視線:</label>
+                            <select id="characterGaze">
+                                <option value="center">中央</option>
+                                <option value="left">左</option>
+                                <option value="right">右</option>
+                                <option value="up">上</option>
+                                <option value="down">下</option>
+                            </select>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>ポーズ:</label>
+                            <select id="characterPose">
+                                <option value="standing">立ち</option>
+                                <option value="sitting">座り</option>
+                                <option value="walking">歩き</option>
+                                <option value="running">走り</option>
+                                <option value="pointing">指差し</option>
+                            </select>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>表情:</label>
+                            <select id="characterExpression">
+                                <option value="neutral">普通</option>
+                                <option value="happy">笑顔</option>
+                                <option value="sad">悲しい</option>
+                                <option value="angry">怒り</option>
+                                <option value="surprised">驚き</option>
                             </select>
                         </div>
                     </div>
                     
-                    <button id="deleteSelected" class="btn btn-secondary full-width">
-                        🗑️ 選択要素を削除
-                    </button>
+                    <div class="control-group">
+                        <label>要素:</label>
+                        <select id="elementType">
+                            <option value="character">キャラクター</option>
+                            <option value="bubble">吹き出し</option>
+                        </select>
+                    </div>
                 </div>
+                
+                <button id="deleteSelected" class="btn btn-secondary full-width">
+                    🗑️ 選択要素を削除
+                </button>
+            </div>
             
             <!-- 演出指示 -->
             <div class="section">
@@ -313,6 +318,7 @@
         </div>
     </div>
     
+    <!-- ステータスバー -->
     <div class="status-bar">
         <div>
             <span id="mousePos">マウス位置: (0, 0)</span> | 
@@ -325,6 +331,7 @@
         </div>
     </div>
     
+    <!-- JavaScript読み込み -->
     <script src="js/main.js"></script>
     <script src="js/canvas.js"></script>
     <script src="js/interaction.js"></script>
