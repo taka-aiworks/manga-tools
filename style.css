@@ -1512,3 +1512,341 @@ html[data-theme="dark"] .control-btn:focus {
     border-radius: 3px;
     white-space: nowrap;
 }
+
+
+
+/* ダークモード視認性改善CSS */
+
+/* ダークモード時の基本テーマ変数 */
+[data-theme="dark"] {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --bg-tertiary: #404040;
+    --text-primary: #ffffff;
+    --text-secondary: #e0e0e0;
+    --text-tertiary: #b0b0b0;
+    --border-color: #555555;
+    --accent-color: #667eea;
+}
+
+/* ダークモード時の吹き出しスタイル改善 */
+[data-theme="dark"] .speech-bubble {
+    background: #2d2d2d;
+    color: #ffffff;
+    border: 2px solid #666666;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+[data-theme="dark"] .speech-bubble.normal {
+    background: #2d2d2d;
+    border-color: #888888;
+}
+
+[data-theme="dark"] .speech-bubble.shout {
+    background: #4a3c1a;
+    border-color: #ff6644;
+    color: #ffeeaa;
+}
+
+[data-theme="dark"] .speech-bubble.whisper {
+    background: #404040;
+    border-color: #999999;
+    color: #cccccc;
+}
+
+[data-theme="dark"] .speech-bubble.thought {
+    background: #1a3344;
+    border-color: #88aacc;
+    color: #e6f3ff;
+}
+
+[data-theme="dark"] .speech-bubble.narration {
+    background: #333333;
+    color: #cccccc;
+    border: 1px solid #666666;
+}
+
+/* ダークモード時の吹き出しの尻尾 */
+[data-theme="dark"] .bubble-tail.bottom-left {
+    border-top-color: #888888;
+}
+
+[data-theme="dark"] .speech-bubble.shout .bubble-tail.bottom-left {
+    border-top-color: #ff6644;
+}
+
+[data-theme="dark"] .speech-bubble.thought .bubble-tail.bottom-left {
+    border-top-color: #88aacc;
+}
+
+/* ダークモード時のキャラクター名表示改善 */
+[data-theme="dark"] .character-name {
+    color: #ffffff;
+    background: rgba(45, 45, 45, 0.9);
+    border: 1px solid #666666;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+}
+
+/* ダークモード時のキャラクター選択枠改善 */
+[data-theme="dark"] .character-placeholder.selected {
+    outline: 2px solid #ff8833;
+    box-shadow: 0 0 12px rgba(255, 136, 51, 0.6);
+}
+
+/* ダークモード時のリサイズハンドル改善 */
+[data-theme="dark"] .resize-handle {
+    background: #ff6600;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 6px rgba(255, 102, 0, 0.8);
+}
+
+/* ダークモード時のパネル選択枠改善 */
+[data-theme="dark"] .selected-panel {
+    border: 3px solid #ff8833 !important;
+    box-shadow: 0 0 15px rgba(255, 136, 51, 0.5);
+}
+
+/* ダークモード時の吹き出し選択状態改善 */
+[data-theme="dark"] .speech-bubble.selected {
+    border-color: #ff8833;
+    box-shadow: 0 0 12px rgba(255, 136, 51, 0.6);
+    background: #3d3d3d;
+}
+
+/* ダークモード時の編集エリア改善 */
+[data-theme="dark"] .bubble-edit-area {
+    background: #2d2d2d;
+    color: #ffffff;
+    border: 3px solid #ff6600;
+    box-shadow: 0 0 20px rgba(255, 102, 0, 0.8);
+}
+
+[data-theme="dark"] .vertical-toggle-btn {
+    background: #667eea;
+    color: #ffffff;
+    border: 1px solid #8899ff;
+}
+
+[data-theme="dark"] .vertical-toggle-btn:hover {
+    background: #5a7bc8;
+    box-shadow: 0 0 8px rgba(102, 126, 234, 0.6);
+}
+
+/* ダークモード時のUI要素改善 */
+[data-theme="dark"] .section {
+    background: #2d2d2d;
+    border: 1px solid #555555;
+}
+
+[data-theme="dark"] .section h3 {
+    color: #ffffff;
+    border-bottom: 1px solid #555555;
+}
+
+[data-theme="dark"] .template-card,
+[data-theme="dark"] .pattern-card,
+[data-theme="dark"] .char-item,
+[data-theme="dark"] .bubble-btn,
+[data-theme="dark"] .scene-btn {
+    background: #404040;
+    color: #e0e0e0;
+    border: 1px solid #666666;
+}
+
+[data-theme="dark"] .template-card:hover,
+[data-theme="dark"] .pattern-card:hover,
+[data-theme="dark"] .char-item:hover,
+[data-theme="dark"] .bubble-btn:hover,
+[data-theme="dark"] .scene-btn:hover {
+    background: #505050;
+    border-color: #888888;
+}
+
+[data-theme="dark"] .template-card.active,
+[data-theme="dark"] .scene-btn.active {
+    background: #667eea;
+    color: #ffffff;
+    border-color: #8899ff;
+}
+
+/* ダークモード時のキャンバス情報表示改善 */
+[data-theme="dark"] .canvas-info {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    border-bottom: 1px solid #555555;
+}
+
+/* ダークモード時の操作状況表示改善 */
+[data-theme="dark"] .operation-status {
+    background: #1a1a1a;
+    color: #e0e0e0;
+    border-bottom: 1px solid #333333;
+}
+
+/* ダークモード時のステータスバー改善 */
+[data-theme="dark"] .status-bar {
+    background: #1a1a1a;
+    color: #b0b0b0;
+    border-top: 1px solid #333333;
+}
+
+/* ダークモード時のコントロール改善 */
+[data-theme="dark"] .control-group label {
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .control-group select,
+[data-theme="dark"] .control-group input[type="range"] {
+    background: #404040;
+    color: #e0e0e0;
+    border: 1px solid #666666;
+}
+
+[data-theme="dark"] .dialogue-input,
+[data-theme="dark"] .plot-input,
+[data-theme="dark"] .direction-memo {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    border: 1px solid #666666;
+}
+
+[data-theme="dark"] .dialogue-input::placeholder,
+[data-theme="dark"] .plot-input::placeholder,
+[data-theme="dark"] .direction-memo::placeholder {
+    color: #888888;
+}
+
+/* ダークモード時のボタン改善 */
+[data-theme="dark"] .btn {
+    background: #404040;
+    color: #e0e0e0;
+    border: 1px solid #666666;
+}
+
+[data-theme="dark"] .btn:hover {
+    background: #505050;
+    border-color: #888888;
+}
+
+[data-theme="dark"] .btn-primary {
+    background: #667eea;
+    border-color: #8899ff;
+}
+
+[data-theme="dark"] .btn-primary:hover {
+    background: #5a7bc8;
+}
+
+[data-theme="dark"] .btn-success {
+    background: #28a745;
+    border-color: #34ce57;
+}
+
+[data-theme="dark"] .btn-secondary {
+    background: #6c757d;
+    border-color: #868e96;
+}
+
+/* ダークモード時のページタブ改善 */
+[data-theme="dark"] .page-tab {
+    background: #404040;
+    color: #e0e0e0;
+    border: 1px solid #666666;
+}
+
+[data-theme="dark"] .page-tab.active {
+    background: #667eea;
+    color: #ffffff;
+    border-color: #8899ff;
+}
+
+[data-theme="dark"] .page-info {
+    color: #b0b0b0;
+}
+
+/* ダークモード時のタイムライン改善 */
+[data-theme="dark"] .timeline-step {
+    background: #404040;
+    color: #e0e0e0;
+    border: 1px solid #666666;
+}
+
+[data-theme="dark"] .timeline-step.active {
+    background: #667eea;
+    color: #ffffff;
+}
+
+/* ダークモード時の推奨パネル改善 */
+[data-theme="dark"] .recommendation-panel {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    border: 1px solid #555555;
+}
+
+/* ダークモード時のキャラクターアイコン改善 */
+[data-theme="dark"] .char-icon {
+    background: #667eea;
+    color: #ffffff;
+    border: 1px solid #8899ff;
+}
+
+/* ダークモード時のヘッダー改善 */
+[data-theme="dark"] .header {
+    background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .header h1 {
+    color: #ffffff;
+}
+
+[data-theme="dark"] .header p {
+    color: #b0b0b0;
+}
+
+/* ダークモード時のコンテナ改善 */
+[data-theme="dark"] .container {
+    background: #1a1a1a;
+}
+
+[data-theme="dark"] .story-panel,
+[data-theme="dark"] .tools-panel {
+    background: #2d2d2d;
+    border: 1px solid #404040;
+}
+
+[data-theme="dark"] .main-canvas {
+    background: #333333;
+    border: 1px solid #555555;
+}
+
+/* ダークモード時のスクロールバー改善 */
+[data-theme="dark"] ::-webkit-scrollbar {
+    width: 8px;
+    background: #2d2d2d;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: #666666;
+    border-radius: 4px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: #888888;
+}
+
+/* ダークモード時のテキスト影効果追加 */
+[data-theme="dark"] .speech-bubble {
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+}
+
+[data-theme="dark"] .character-name {
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.9);
+    font-weight: bold;
+}
+
+/* ダークモード時の選択状態をより明確に */
+[data-theme="dark"] .selected {
+    box-shadow: 0 0 15px rgba(255, 136, 51, 0.8) !important;
+    border-color: #ff8833 !important;
+}
