@@ -153,31 +153,75 @@ function handleMouseDown(e) {
     clearSelection();
 }
 
+// handleMouseMove 関数の修正版
 function handleMouseMove(e) {
-    if (!selectedElement) return;
-    
+    // マウス位置を更新
     const coords = getCanvasCoordinates(e);
     
-    if (isResizing && selectedElement.panelId) {
+    // ドラッグ中またはリサイズ中の処理
+    if (window.isResizing && window.selectedElement && window.resizeStartData) {
         // キャラクターリサイズ処理
-        handleCharacterResize(selectedElement, coords.x, coords.y);
-    } else if (isDragging && selectedElement.id && panels.includes(selectedElement)) {
-        // パネルドラッグ
-        dragPanel(selectedElement, coords.x, coords.y);
-    } else if (isDragging && selectedElement.panelId) {
-        // キャラクターまたは吹き出しドラッグ
-        dragElement(selectedElement, coords.x, coords.y);
+        if (window.selectedElement.panelId && window.resizeStartData.character) {
+            handleCharacterResize(window.selectedElement, coords.x, coords.y);
+        }
+        return;
+    }
+    
+    if (window.isDragging && window.selectedElement) {
+        if (window.selectedElement.id && panels.includes(window.selectedElement)) {
+            // パネルドラッグ
+            dragPanel(window.selectedElement, coords.x, coords.y);
+        } else if (window.selectedElement.panelId) {
+            // キャラクターまたは吹き出しドラッグ
+            dragElement(window.selectedElement, coords.x, coords.y);
+        }
+        return;
+    }
+    
+    // マウス位置表示の更新
+    const mousePosElement = document.getElementById('mousePos');
+    if (mousePosElement) {
+        mousePosElement.textContent = `マウス位置: (${coords.x}, ${coords.y})`;
     }
 }
 
+
+// handleMouseUp 関数の修正版
 function handleMouseUp(e) {
-    if (isDragging || isResizing) {
+    if (window.isDragging || window.isResizing) {
         console.log('🖱️ ドラッグ/リサイズ終了');
-        isDragging = false;
-        isResizing = false;
-        selectedElement = null;
-        resizeStartData = {};
+        
+        // 状態をリセット
+        window.isDragging = false;
+        window.isResizing = false;
+        window.selectedElement = null;
+        window.resizeStartData = {};
+        
+        // 最終的な表示更新
+        if (typeof updateCharacterOverlay === 'function') {
+            updateCharacterOverlay();
+        }
+        if (typeof updateBubbleOverlay === 'function') {
+            updateBubbleOverlay();
+        }
     }
+}
+
+// グローバル変数の確実な初期化
+function ensureGlobalVariables() {
+    if (typeof window.isDragging === 'undefined') window.isDragging = false;
+    if (typeof window.isResizing === 'undefined') window.isResizing = false;
+    if (typeof window.selectedElement === 'undefined') window.selectedElement = null;
+    if (typeof window.dragOffset === 'undefined') window.dragOffset = {x: 0, y: 0};
+    if (typeof window.resizeStartData === 'undefined') window.resizeStartData = {};
+    
+    console.log('✅ グローバル変数初期化完了');
+}
+
+// 初期化の確実な実行
+document.addEventListener('DOMContentLoaded', ensureGlobalVariables);
+if (document.readyState !== 'loading') {
+    ensureGlobalVariables();
 }
 
 function handleGlobalMouseUp(e) {
@@ -245,26 +289,45 @@ function dragPanel(panel, x, y) {
     updateStatus();
 }
 
+// dragElement 関数の修正版
 function dragElement(element, x, y) {
-    const panel = panels.find(p => p.id === element.panelId);
-    if (!panel) return;
-    
-    // パネル内の相対位置に変換
-    const newX = (x - dragOffset.x - panel.x) / panel.width;
-    const newY = (y - dragOffset.y - panel.y) / panel.height;
-    
-    // パネル内に制限
-    element.x = Math.max(0, Math.min(1, newX));
-    element.y = Math.max(0, Math.min(1, newY));
-    
-    // 表示更新
-    if (selectedCharacter) {
-        safeExecute('updateCharacterOverlay');
-    } else if (selectedBubble) {
-        safeExecute('updateBubbleOverlay');
+    if (!element || !element.panelId) {
+        console.error('❌ dragElement: elementまたはpanelIdが未定義');
+        return;
     }
     
-    updateControlsFromElement();
+    const panel = panels ? panels.find(p => p.id === element.panelId) : null;
+    if (!panel) {
+        console.error('❌ dragElement: 対応するパネルが見つかりません', element.panelId);
+        return;
+    }
+    
+    try {
+        // パネル内の相対位置に変換
+        const dragOffsetX = window.dragOffset ? window.dragOffset.x : 0;
+        const dragOffsetY = window.dragOffset ? window.dragOffset.y : 0;
+        
+        const newX = (x - dragOffsetX - panel.x) / panel.width;
+        const newY = (y - dragOffsetY - panel.y) / panel.height;
+        
+        // パネル内に制限して安全に設定
+        element.x = Math.max(0, Math.min(1, newX));
+        element.y = Math.max(0, Math.min(1, newY));
+        
+        // 表示更新
+        if (selectedCharacter && typeof updateCharacterOverlay === 'function') {
+            updateCharacterOverlay();
+        } else if (selectedBubble && typeof updateBubbleOverlay === 'function') {
+            updateBubbleOverlay();
+        }
+        
+        if (typeof updateControlsFromElement === 'function') {
+            updateControlsFromElement();
+        }
+        
+    } catch (error) {
+        console.error('❌ dragElement エラー:', error);
+    }
 }
 
 // ===== キャラクターリサイズ処理 =====
