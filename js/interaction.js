@@ -1,4 +1,4 @@
-// ===== インタラクションモジュール（修正版） =====
+// ===== インタラクションモジュール =====
 
 function initializeInteraction() {
     console.log('🖱️ インタラクションモジュール初期化');
@@ -154,33 +154,40 @@ function handleMouseDown(e) {
 }
 
 function handleMouseMove(e) {
-    if (!isDragging || !selectedElement) return;
+    if (!selectedElement) return;
     
     const coords = getCanvasCoordinates(e);
     
-    if (selectedElement.id && panels.includes(selectedElement)) {
+    if (isResizing && selectedElement.panelId) {
+        // キャラクターリサイズ処理
+        handleCharacterResize(selectedElement, coords.x, coords.y);
+    } else if (isDragging && selectedElement.id && panels.includes(selectedElement)) {
         // パネルドラッグ
         dragPanel(selectedElement, coords.x, coords.y);
-    } else if (selectedElement.panelId) {
+    } else if (isDragging && selectedElement.panelId) {
         // キャラクターまたは吹き出しドラッグ
         dragElement(selectedElement, coords.x, coords.y);
     }
 }
 
 function handleMouseUp(e) {
-    if (isDragging) {
-        console.log('🖱️ ドラッグ終了');
+    if (isDragging || isResizing) {
+        console.log('🖱️ ドラッグ/リサイズ終了');
         isDragging = false;
+        isResizing = false;
         selectedElement = null;
+        resizeStartData = {};
     }
 }
 
 function handleGlobalMouseUp(e) {
     // キャンバス外でマウスが離された場合の処理
-    if (isDragging) {
-        console.log('🖱️ グローバルマウスアップ - ドラッグ強制終了');
+    if (isDragging || isResizing) {
+        console.log('🖱️ グローバルマウスアップ - ドラッグ/リサイズ強制終了');
         isDragging = false;
+        isResizing = false;
         selectedElement = null;
+        resizeStartData = {};
     }
 }
 
@@ -258,6 +265,44 @@ function dragElement(element, x, y) {
     }
     
     updateControlsFromElement();
+}
+
+// ===== キャラクターリサイズ処理 =====
+function handleCharacterResize(character, mouseX, mouseY) {
+    if (!resizeStartData || !resizeStartData.cornerType) return;
+    
+    const deltaX = mouseX - resizeStartData.startX;
+    const deltaY = mouseY - resizeStartData.startY;
+    
+    // 距離から新しいスケールを計算
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    const scaleFactor = distance / 100; // 調整可能な値
+    
+    let newScale = resizeStartData.startScale;
+    
+    // コーナーの種類によってスケール計算を調整
+    switch(resizeStartData.cornerType) {
+        case 'bottom-right':
+            newScale = resizeStartData.startScale + scaleFactor * 0.01;
+            break;
+        case 'top-left':
+            newScale = resizeStartData.startScale - scaleFactor * 0.01;
+            break;
+        case 'top-right':
+        case 'bottom-left':
+            // 対角線の場合は平均的な変化
+            newScale = resizeStartData.startScale + (deltaX > 0 ? scaleFactor * 0.01 : -scaleFactor * 0.01);
+            break;
+    }
+    
+    // スケールの範囲制限
+    character.scale = Math.max(0.1, Math.min(3.0, newScale));
+    
+    // 表示更新
+    safeExecute('updateCharacterOverlay');
+    updateControlsFromElement();
+    
+    console.log(`🔧 キャラクターリサイズ: ${character.name} スケール: ${character.scale.toFixed(2)}`);
 }
 
 // ===== 選択処理 =====
@@ -742,7 +787,6 @@ function updateCharacterSettings() {
     safeExecute('updateCharacterOverlay');
 }
 
-// ===== 削除機能（修正版 - 統一対応） =====
 function deleteSelected() {
     if (selectedCharacter) {
         console.log('🗑️ キャラクター削除:', selectedCharacter.name);
@@ -770,127 +814,3 @@ function deleteSelected() {
     updateStatus();
     updateElementCount();
 }
-
-// ===== キーボードショートカット（修正版） =====
-function handleKeyDown(e) {
-    // Ctrl/Cmd キーとの組み合わせ
-    if (e.ctrlKey || e.metaKey) {
-        switch(e.key) {
-            case 's':
-                e.preventDefault();
-                safeExecute('saveProject');
-                break;
-            case 'e':
-                e.preventDefault();
-                safeExecute('exportToClipStudio');
-                break;
-            case 'z':
-                e.preventDefault();
-                if (e.shiftKey) {
-                    redo();
-                } else {
-                    undo();
-                }
-                break;
-            case 'y':
-                e.preventDefault();
-                redo();
-                break;
-            case 'd':
-                e.preventDefault();
-                if (selectedPanel) {
-                    duplicatePanelWithHistory(selectedPanel);
-                }
-                break;
-        }
-        return;
-    }
-    
-    // 単体キー（修正版 - Backspaceも追加）
-    switch(e.key) {
-        case 'Delete':
-        case 'Backspace':  // Backspaceキーも追加
-            if (selectedPanel || selectedCharacter || selectedBubble) {
-                e.preventDefault();
-                console.log('⌨️ キーボード削除実行:', e.key);
-                deleteSelected();
-            }
-            break;
-        case 'Escape':
-            clearSelection();
-            closeContextMenu();
-            break;
-        case 'h':
-            if (selectedPanel) {
-                e.preventDefault();
-                splitPanelWithHistory(selectedPanel, 'horizontal');
-            }
-            break;
-        case 'v':
-            if (selectedPanel) {
-                e.preventDefault();
-                splitPanelWithHistory(selectedPanel, 'vertical');
-            }
-            break;
-        case 'd':
-            if (selectedPanel) {
-                e.preventDefault();
-                duplicatePanelWithHistory(selectedPanel);
-            }
-            break;
-        case 'r':
-            if (selectedPanel) {
-                e.preventDefault();
-                rotatePanelWithHistory(selectedPanel);
-            }
-            break;
-        case 'g':
-            const showGuides = document.getElementById('showGuides');
-            if (showGuides) {
-                showGuides.checked = !showGuides.checked;
-                toggleGuides();
-            }
-            break;
-        case 'F1':
-        case '?':
-            e.preventDefault();
-            showKeyboardHelp();
-            break;
-    }
-}
-
-function showKeyboardHelp() {
-    const helpContent = `
-        <div class="help-content">
-            <h3>🎮 キーボードショートカット</h3>
-            
-            <div class="help-section">
-                <h4>📐 パネル操作</h4>
-                <div class="help-item"><kbd>H</kbd> 横分割</div>
-                <div class="help-item"><kbd>V</kbd> 縦分割</div>
-                <div class="help-item"><kbd>D</kbd> 複製</div>
-                <div class="help-item"><kbd>R</kbd> 90度回転</div>
-                <div class="help-item"><kbd>Delete</kbd> / <kbd>Backspace</kbd> 削除</div>
-            </div>
-            
-            <div class="help-section">
-                <h4>🔄 操作履歴</h4>
-                <div class="help-item"><kbd>Ctrl+Z</kbd> 元に戻す</div>
-                <div class="help-item"><kbd>Ctrl+Y</kbd> / <kbd>Ctrl+Shift+Z</kbd> やり直し</div>
-            </div>
-            
-            <div class="help-section">
-                <h4>🎭 要素操作</h4>
-                <div class="help-item"><kbd>Delete</kbd> / <kbd>Backspace</kbd> 選択要素を削除</div>
-                <div class="help-item">選択された要素（パネル・キャラ・吹き出し）を削除</div>
-            </div>
-            
-            <div class="help-section">
-                <h4>⚡ その他</h4>
-                <div class="help-item"><kbd>G</kbd> ガイド表示切り替え</div>
-                <div class="help-item"><kbd>Ctrl+S</kbd> プロジェクト保存</div>
-                <div class="help-item"><kbd>Ctrl+E</kbd> クリスタ用出力</div>
-                <div class="help-item"><kbd>Escape</kbd> 選択解除</div>
-                <div class="help-item"><kbd>F1</kbd> / <kbd>?</kbd> このヘルプ</div>
-            </div>
-        </div>
