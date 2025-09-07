@@ -73,23 +73,26 @@ function updateCharacterOverlay() {
     const overlay = document.getElementById('characterOverlay');
     if (!overlay) return;
     
-    // 既存の要素を全て削除（重複防止）
     overlay.innerHTML = '';
     
     characters.forEach(character => {
         const panel = panels.find(p => p.id === character.panelId);
         if (!panel) return;
         
-        // 既存の要素があるかチェック
-        let element = overlay.querySelector(`[data-char-id="${character.id}"]`);
+        const element = createCharacterElement(character, panel);
+        overlay.appendChild(element);
         
-        if (!element) {
-            // 新しい要素を作成
-            element = createCharacterElement(character, panel);
-            overlay.appendChild(element);
+        // 選択されたキャラクターのみリサイズハンドルを表示
+        if (selectedCharacter === character) {
+            const handles = element.querySelectorAll('.resize-handle');
+            handles.forEach(handle => {
+                handle.style.display = 'block';
+            });
         } else {
-            // 既存の要素の位置を更新
-            updateCharacterElementPosition(element, character, panel);
+            const handles = element.querySelectorAll('.resize-handle');
+            handles.forEach(handle => {
+                handle.style.display = 'none';
+            });
         }
     });
 }
