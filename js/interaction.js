@@ -814,3 +814,142 @@ function deleteSelected() {
     updateStatus();
     updateElementCount();
 }
+
+// キーボードイベントの修正版
+// interaction.js の handleKeyDown 関数を以下に置き換えてください
+
+function handleKeyDown(e) {
+    console.log('⌨️ キーダウン:', e.key, 'Ctrl:', e.ctrlKey, 'Meta:', e.metaKey);
+    
+    // フォーカスされている要素を確認
+    const activeElement = document.activeElement;
+    const isInputField = activeElement && (
+        activeElement.tagName === 'INPUT' || 
+        activeElement.tagName === 'TEXTAREA' || 
+        activeElement.contentEditable === 'true'
+    );
+    
+    // 入力フィールドにフォーカスがある場合は、Delete/Backspace以外は無視
+    if (isInputField && e.key !== 'Delete' && e.key !== 'Backspace') {
+        return;
+    }
+    
+    // Ctrl/Cmd キーとの組み合わせ
+    if (e.ctrlKey || e.metaKey) {
+        switch(e.key) {
+            case 's':
+                e.preventDefault();
+                console.log('💾 保存ショートカット');
+                safeExecute('saveProject');
+                break;
+            case 'e':
+                e.preventDefault();
+                console.log('📤 エクスポートショートカット');
+                safeExecute('exportToClipStudio');
+                break;
+            case 'z':
+                e.preventDefault();
+                if (e.shiftKey) {
+                    console.log('⏩ Redoショートカット');
+                    redo();
+                } else {
+                    console.log('⏪ Undoショートカット');
+                    undo();
+                }
+                break;
+            case 'y':
+                e.preventDefault();
+                console.log('⏩ Redoショートカット');
+                redo();
+                break;
+            case 'd':
+                e.preventDefault();
+                if (selectedPanel) {
+                    console.log('📋 複製ショートカット');
+                    duplicatePanelWithHistory(selectedPanel);
+                }
+                break;
+        }
+        return;
+    }
+    
+    // 単体キー
+    switch(e.key) {
+        case 'Delete':
+        case 'Backspace':
+            // 入力フィールドにフォーカスがある場合は通常の動作
+            if (isInputField) {
+                console.log('📝 入力フィールドでのDelete/Backspace - 通常動作');
+                return;
+            }
+            
+            // 選択された要素がある場合は削除
+            if (selectedPanel || selectedCharacter || selectedBubble) {
+                e.preventDefault();
+                console.log('🗑️ 削除実行:', e.key, 'Panel:', !!selectedPanel, 'Char:', !!selectedCharacter, 'Bubble:', !!selectedBubble);
+                deleteSelected();
+            } else {
+                console.log('❌ 削除対象なし');
+            }
+            break;
+            
+        case 'Escape':
+            console.log('❌ Escapeキー - 選択解除');
+            clearSelection();
+            closeContextMenu();
+            break;
+            
+        case 'h':
+            if (selectedPanel) {
+                e.preventDefault();
+                console.log('📐 横分割ショートカット');
+                splitPanelWithHistory(selectedPanel, 'horizontal');
+            }
+            break;
+            
+        case 'v':
+            if (selectedPanel) {
+                e.preventDefault();
+                console.log('📏 縦分割ショートカット');
+                splitPanelWithHistory(selectedPanel, 'vertical');
+            }
+            break;
+            
+        case 'd':
+            if (selectedPanel) {
+                e.preventDefault();
+                console.log('📋 複製ショートカット');
+                duplicatePanelWithHistory(selectedPanel);
+            }
+            break;
+            
+        case 'r':
+            if (selectedPanel) {
+                e.preventDefault();
+                console.log('🔄 回転ショートカット');
+                rotatePanelWithHistory(selectedPanel);
+            }
+            break;
+            
+        case 'g':
+            const showGuides = document.getElementById('showGuides');
+            if (showGuides) {
+                showGuides.checked = !showGuides.checked;
+                console.log('👁️ ガイド切り替え:', showGuides.checked);
+                toggleGuides();
+            }
+            break;
+            
+        case 'F1':
+        case '?':
+            e.preventDefault();
+            console.log('❓ ヘルプ表示');
+            showKeyboardHelp();
+            break;
+            
+        default:
+            console.log('⌨️ 未処理キー:', e.key);
+            break;
+    }
+}
+
