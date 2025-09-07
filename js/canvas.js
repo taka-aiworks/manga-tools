@@ -2,9 +2,49 @@
 
 function initializeCanvas() {
     console.log('🎨 キャンバスモジュール初期化');
+    
+    if (!canvas || !ctx) {
+        console.error('❌ キャンバス要素が見つかりません');
+        return;
+    }
+    
+    // キャンバス設定
+    setupCanvasSettings();
+    
+    // 高DPI対応
+    setHighDPICanvas();
+    
+    console.log('✅ キャンバス初期化完了');
 }
 
-// ===== キャンバス再描画 =====
+// ===== キャンバス基本設定 =====
+function setupCanvasSettings() {
+    if (!ctx) return;
+    
+    // アンチエイリアシング有効化
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    
+    // テキスト描画の品質向上
+    ctx.textRenderingOptimization = 'optimizeQuality';
+}
+
+function setHighDPICanvas() {
+    if (!canvas || !ctx) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    
+    ctx.scale(dpr, dpr);
+    
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+}
+
+// ===== メイン描画機能 =====
 function redrawCanvas() {
     if (!ctx || !canvas) return;
     
@@ -17,14 +57,15 @@ function redrawCanvas() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     // パネル描画
-    panels.forEach(panel => {
-        drawPanel(panel, panel === selectedPanel);
-    });
+    if (Array.isArray(panels)) {
+        panels.forEach(panel => {
+            drawPanel(panel, panel === selectedPanel);
+        });
+    }
 }
 
-// ===== パネル描画 =====
 function drawPanel(panel, isSelected = false) {
-    if (!ctx) return;
+    if (!ctx || !panel) return;
     
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     
@@ -49,16 +90,15 @@ function drawPanel(panel, isSelected = false) {
     // 選択時の追加表示
     if (isSelected) {
         // 選択インジケーター
-        ctx.fillStyle = isSelected ? '#ff8833' : '#0066ff';
+        ctx.fillStyle = '#ff8833';
         ctx.font = '12px Arial';
         ctx.fillText('選択中', panel.x + panel.width - 50, panel.y + 10);
         
-        // コーナーハンドル（将来のリサイズ用）
+        // コーナーハンドル
         drawCornerHandles(panel);
     }
 }
 
-// ===== コーナーハンドル描画 =====
 function drawCornerHandles(panel) {
     if (!ctx) return;
     
@@ -67,23 +107,17 @@ function drawCornerHandles(panel) {
     
     ctx.fillStyle = isDark ? '#ff8833' : '#ff6600';
     
-    // 右下コーナー
-    ctx.fillRect(
-        panel.x + panel.width - handleSize, 
-        panel.y + panel.height - handleSize, 
-        handleSize, 
-        handleSize
-    );
+    // 4つのコーナーハンドル
+    const corners = [
+        [panel.x, panel.y], // 左上
+        [panel.x + panel.width - handleSize, panel.y], // 右上
+        [panel.x, panel.y + panel.height - handleSize], // 左下
+        [panel.x + panel.width - handleSize, panel.y + panel.height - handleSize] // 右下
+    ];
     
-    // 他のコーナーも追加可能
-    // 左上
-    ctx.fillRect(panel.x, panel.y, handleSize, handleSize);
-    
-    // 右上
-    ctx.fillRect(panel.x + panel.width - handleSize, panel.y, handleSize, handleSize);
-    
-    // 左下
-    ctx.fillRect(panel.x, panel.y + panel.height - handleSize, handleSize, handleSize);
+    corners.forEach(([x, y]) => {
+        ctx.fillRect(x, y, handleSize, handleSize);
+    });
 }
 
 // ===== ガイドライン描画 =====
@@ -104,15 +138,16 @@ function drawGuidelines() {
     guideCtx.setLineDash([3, 3]);
     guideCtx.globalAlpha = 0.6;
     
-    panels.forEach(panel => {
-        drawPanelGuidelines(panel);
-    });
+    if (Array.isArray(panels)) {
+        panels.forEach(panel => {
+            drawPanelGuidelines(panel);
+        });
+    }
     
     guideCtx.setLineDash([]);
     guideCtx.globalAlpha = 1.0;
 }
 
-// ===== パネル内ガイドライン =====
 function drawPanelGuidelines(panel) {
     if (!guideCtx) return;
     
@@ -136,7 +171,7 @@ function drawPanelGuidelines(panel) {
     guideCtx.lineTo(panel.x + panel.width, panel.y + thirdY * 2);
     guideCtx.stroke();
     
-    // 中心線
+    // 中心線（薄く表示）
     guideCtx.save();
     guideCtx.setLineDash([1, 3]);
     guideCtx.globalAlpha = 0.3;
@@ -156,9 +191,9 @@ function drawPanelGuidelines(panel) {
     guideCtx.restore();
 }
 
-// ===== キャンバスユーティリティ =====
+// ===== 座標・判定ユーティリティ =====
 function getCanvasCoordinates(e) {
-    if (!canvas) return {x: 0, y: 0};
+    if (!canvas) return { x: 0, y: 0 };
     
     const rect = canvas.getBoundingClientRect();
     return {
@@ -168,56 +203,85 @@ function getCanvasCoordinates(e) {
 }
 
 function isPointInPanel(x, y, panel) {
+    if (!panel) return false;
+    
     return x >= panel.x && x <= panel.x + panel.width &&
            y >= panel.y && y <= panel.y + panel.height;
 }
 
 function isPointInCornerHandle(x, y, panel) {
+    if (!panel) return false;
+    
     const handleSize = 8;
     
-    // 右下コーナーハンドル
-    const rightBottom = {
-        x: panel.x + panel.width - handleSize,
-        y: panel.y + panel.height - handleSize,
-        width: handleSize,
-        height: handleSize
-    };
+    // 4つのコーナーハンドルをチェック
+    const corners = [
+        { x: panel.x, y: panel.y }, // 左上
+        { x: panel.x + panel.width - handleSize, y: panel.y }, // 右上
+        { x: panel.x, y: panel.y + panel.height - handleSize }, // 左下
+        { x: panel.x + panel.width - handleSize, y: panel.y + panel.height - handleSize } // 右下
+    ];
     
-    return x >= rightBottom.x && x <= rightBottom.x + rightBottom.width &&
-           y >= rightBottom.y && y <= rightBottom.y + rightBottom.height;
+    return corners.some(corner => 
+        x >= corner.x && x <= corner.x + handleSize &&
+        y >= corner.y && y <= corner.y + handleSize
+    );
 }
 
-// ===== キャンバス関連のイベント処理 =====
+function findPanelAt(x, y) {
+    if (!Array.isArray(panels)) return null;
+    
+    // 後ろから検索（上に描画されているものを優先）
+    for (let i = panels.length - 1; i >= 0; i--) {
+        if (isPointInPanel(x, y, panels[i])) {
+            return panels[i];
+        }
+    }
+    return null;
+}
+
+// ===== イベント関連 =====
 function toggleGuides() {
     drawGuidelines();
+    console.log('👁️ ガイドライン表示切り替え');
 }
 
-// ===== 描画品質向上 =====
-function setHighDPICanvas() {
+// ===== レスポンシブ対応 =====
+function handleCanvasResize() {
     if (!canvas || !ctx) return;
     
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
+    const container = canvas.parentElement;
+    if (!container) return;
     
+    const rect = container.getBoundingClientRect();
+    
+    // 高DPI対応
+    const dpr = window.devicePixelRatio || 1;
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
-    
     ctx.scale(dpr, dpr);
     
     canvas.style.width = rect.width + 'px';
     canvas.style.height = rect.height + 'px';
+    
+    // 再描画
+    redrawCanvas();
+    drawGuidelines();
+    
+    console.log('📏 キャンバスサイズ調整:', rect.width, 'x', rect.height);
 }
 
-// ===== キャンバス初期化時の設定 =====
-function setupCanvasSettings() {
-    if (!ctx) return;
-    
-    // アンチエイリアシング有効化
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    
-    // テキスト描画の品質向上
-    ctx.textRenderingOptimization = 'optimizeQuality';
-}
+// ===== 初期化時のイベント設定 =====
+window.addEventListener('resize', handleCanvasResize);
+
+// ===== グローバル関数として公開 =====
+window.initializeCanvas = initializeCanvas;
+window.redrawCanvas = redrawCanvas;
+window.drawGuidelines = drawGuidelines;
+window.getCanvasCoordinates = getCanvasCoordinates;
+window.isPointInPanel = isPointInPanel;
+window.isPointInCornerHandle = isPointInCornerHandle;
+window.findPanelAt = findPanelAt;
+window.toggleGuides = toggleGuides;
 
 console.log('✅ canvas.js 読み込み完了');
