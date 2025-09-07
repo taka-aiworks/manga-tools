@@ -1,3 +1,140 @@
+// interaction.jsに以下の関数を追加：
+
+// リサイズ開始
+function startResize(e, character, position) {
+    console.log('🔄 リサイズ開始:', character.name, position);
+    
+    isResizing = true;
+    selectedElement = character;
+    selectedCharacter = character;
+    
+    const coords = getCanvasCoordinates(e);
+    const panel = panels.find(p => p.id === character.panelId);
+    
+    if (!panel) return;
+    
+    // リサイズ開始時の情報を保存
+    resizeStartData = {
+        character: character,
+        position: position,
+        startX: coords.x,
+        startY: coords.y,
+        startScale: character.scale,
+        startCharX: character.x,
+        startCharY: character.y,
+        panel: panel
+    };
+    
+    // ドキュメント全体でマウスイベントを監視
+    document.addEventListener('mousemove', handleResize);
+    document.addEventListener('mouseup', endResize);
+}
+
+// リサイズ処理
+function handleResize(e) {
+    if (!isResizing || !resizeStartData.character) return;
+    
+    const coords = getCanvasCoordinates(e);
+    const data = resizeStartData;
+    
+    // マウスの移動量を計算
+    const deltaX = coords.x - data.startX;
+    const deltaY = coords.y - data.startY;
+    
+    // 位置とスケールの調整方向を決定
+    let scaleChange = 0;
+    let positionChangeX = 0;
+    let positionChangeY = 0;
+    
+    switch (data.position) {
+        case 'bottom-right':
+            // 右下：スケールアップ、位置変更なし
+            scaleChange = (deltaX + deltaY) / 200;
+            break;
+            
+        case 'top-left':
+            // 左上：スケールアップ、位置を左上に移動
+            scaleChange = -(deltaX + deltaY) / 200;
+            positionChangeX = deltaX / data.panel.width;
+            positionChangeY = deltaY / data.panel.height;
+            break;
+            
+        case 'top-right':
+            // 右上：スケールアップ、Y位置を上に移動
+            scaleChange = (deltaX - deltaY) / 200;
+            positionChangeY = deltaY / data.panel.height;
+            break;
+            
+        case 'bottom-left':
+            // 左下：スケールアップ、X位置を左に移動
+            scaleChange = (-deltaX + deltaY) / 200;
+            positionChangeX = deltaX / data.panel.width;
+            break;
+            
+        case 'right':
+            // 右辺：横方向のみスケール
+            scaleChange = deltaX / 300;
+            break;
+            
+        case 'left':
+            // 左辺：横方向のみスケール、位置調整
+            scaleChange = -deltaX / 300;
+            positionChangeX = deltaX / data.panel.width;
+            break;
+            
+        case 'bottom':
+            // 下辺：縦方向のみスケール
+            scaleChange = deltaY / 300;
+            break;
+            
+        case 'top':
+            // 上辺：縦方向のみスケール、位置調整
+            scaleChange = -deltaY / 300;
+            positionChangeY = deltaY / data.panel.height;
+            break;
+    }
+    
+    // 新しいスケールを計算（制限付き）
+    const newScale = Math.max(0.3, Math.min(3.0, data.startScale + scaleChange));
+    
+    // 新しい位置を計算（パネル内制限）
+    const newX = Math.max(0, Math.min(1, data.startCharX + positionChangeX));
+    const newY = Math.max(0, Math.min(1, data.startCharY + positionChangeY));
+    
+    // キャラクターの値を更新
+    data.character.scale = newScale;
+    data.character.x = newX;
+    data.character.y = newY;
+    
+    // 表示更新
+    updateCharacterOverlay();
+    updateControlsFromElement();
+    
+    console.log('🔄 リサイズ中:', {
+        scale: newScale.toFixed(2),
+        x: newX.toFixed(2),
+        y: newY.toFixed(2)
+    });
+}
+
+// リサイズ終了
+function endResize(e) {
+    if (!isResizing) return;
+    
+    console.log('🔄 リサイズ終了');
+    
+    isResizing = false;
+    resizeStartData = {};
+    
+    // イベントリスナーを削除
+    document.removeEventListener('mousemove', handleResize);
+    document.removeEventListener('mouseup', endResize);
+}
+
+
+
+
+
 // ===== インタラクションモジュール =====
 
 function initializeInteraction() {
