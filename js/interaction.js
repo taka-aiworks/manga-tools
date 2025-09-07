@@ -159,7 +159,8 @@ function preventScroll(e) {
 
 
 
-// 🔄 完全置き換え：handleResize → handleResizeGlobal
+// ===== リサイズ感度調整版 - handleResizeGlobal関数のみ置き換え =====
+
 function handleResizeGlobal(e) {
     if (!isResizing || !resizeStartData.character) return;
     
@@ -182,38 +183,48 @@ function handleResizeGlobal(e) {
     let positionChangeX = 0;
     let positionChangeY = 0;
     
-    const sensitivity = 0.001; // さらに感度を下げる
+    // 🎯 感度を上げる（0.001 → 0.003）
+    const sensitivity = 0.003;
+    // 🎯 位置変更の感度も上げる（0.2 → 0.4）
+    const positionSensitivity = 0.4;
     
     switch (data.position) {
         case 'bottom-right':
             scaleChange = (deltaX + deltaY) * sensitivity;
             break;
+            
         case 'top-left':
             scaleChange = -(deltaX + deltaY) * sensitivity;
-            positionChangeX = deltaX / data.panel.width * 0.2;
-            positionChangeY = deltaY / data.panel.height * 0.2;
+            positionChangeX = deltaX / data.panel.width * positionSensitivity;
+            positionChangeY = deltaY / data.panel.height * positionSensitivity;
             break;
+            
         case 'top-right':
             scaleChange = (deltaX - deltaY) * sensitivity;
-            positionChangeY = deltaY / data.panel.height * 0.2;
+            positionChangeY = deltaY / data.panel.height * positionSensitivity;
             break;
+            
         case 'bottom-left':
             scaleChange = (-deltaX + deltaY) * sensitivity;
-            positionChangeX = deltaX / data.panel.width * 0.2;
+            positionChangeX = deltaX / data.panel.width * positionSensitivity;
             break;
+            
         case 'right':
             scaleChange = deltaX * sensitivity;
             break;
+            
         case 'left':
             scaleChange = -deltaX * sensitivity;
-            positionChangeX = deltaX / data.panel.width * 0.2;
+            positionChangeX = deltaX / data.panel.width * positionSensitivity;
             break;
+            
         case 'bottom':
             scaleChange = deltaY * sensitivity;
             break;
+            
         case 'top':
             scaleChange = -deltaY * sensitivity;
-            positionChangeY = deltaY / data.panel.height * 0.2;
+            positionChangeY = deltaY / data.panel.height * positionSensitivity;
             break;
     }
     
@@ -228,9 +239,23 @@ function handleResizeGlobal(e) {
     updateCharacterOverlay();
     updateControlsFromElement();
     
+    // 🎯 リアルタイム感度表示（デバッグ用）
+    if (localStorage.getItem('debugMode') === 'true') {
+        console.log(`📏 Scale: ${newScale.toFixed(3)}, Delta: ${deltaX.toFixed(1)}, ${deltaY.toFixed(1)}`);
+    }
+    
     return false;
 }
 
+// 🎯 感度調整用のヘルパー関数（オプション）
+window.adjustResizeSensitivity = function(newSensitivity) {
+    console.log(`🎚️ リサイズ感度を ${newSensitivity} に調整`);
+    // この値をhandleResizeGlobal内で使用する場合
+    window.customSensitivity = newSensitivity;
+};
+
+console.log('✅ リサイズ感度調整版 適用完了');
+console.log('🎚️ 現在の感度: スケール=0.003, 位置=0.4');
 
 
 // 🔄 完全置き換え：endResize → endResizeGlobal
