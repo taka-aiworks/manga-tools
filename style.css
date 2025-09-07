@@ -1266,3 +1266,10 @@ html[data-theme="dark"] .control-btn:focus {
         width: 100%;
     }
 }
+
+.speech-bubble.vertical-text {
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    direction: rtl;
+    text-align: center;
+}
