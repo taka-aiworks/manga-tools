@@ -148,13 +148,29 @@ function createCharacterElement(character, panel) {
         <div class="character-name">${character.name}</div>
     `;
     
+    // ===== リサイズハンドルを追加 =====
+    addResizeHandles(element, character);
+    
     // 初期位置設定
     updateCharacterElementPosition(element, character, panel);
     element.style.cursor = 'move';
     
-    // イベントリスナー
+    // イベントリスナー（移動用）
+    addCharacterMoveEvents(element, character, panel);
+    
+    return element;
+}
+
+// キャラクター移動イベント（分離）
+function addCharacterMoveEvents(element, character, panel) {
     let clickCount = 0;
+    
     element.addEventListener('mousedown', function(e) {
+        // リサイズハンドルクリックの場合はスキップ
+        if (e.target.classList.contains('resize-handle')) {
+            return;
+        }
+        
         clickCount++;
         console.log('👤 キャラクタークリック:', character.name, 'count:', clickCount);
         
@@ -184,9 +200,8 @@ function createCharacterElement(character, panel) {
         
         console.log('🚀 ドラッグ開始');
     });
-    
-    return element;
 }
+
 
 // ===== 吹き出し管理 =====
 function addBubble(bubbleType) {
