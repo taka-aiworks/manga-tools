@@ -2642,5 +2642,375 @@ let bubbleResizeStartData = {};
 
 console.log('✅ 吹き出しリサイズ・縦書き機能 読み込み完了');
 
+// ===== 不足している関数の追加 - interaction.jsに追加 =====
+
+// 🆕 updateControlsFromElement関数
+function updateControlsFromElement() {
+    if (!selectedElement) return;
+    
+    const scaleEl = document.getElementById('elementScale');
+    const xEl = document.getElementById('elementX');
+    const yEl = document.getElementById('elementY');
+    const typeEl = document.getElementById('elementType');
+    const characterSettings = document.getElementById('characterSettings');
+    
+    if (scaleEl) scaleEl.value = selectedElement.scale || 1.0;
+    if (xEl) xEl.value = selectedElement.x || 0.5;
+    if (yEl) yEl.value = selectedElement.y || 0.5;
+    
+    if (typeEl && selectedCharacter) {
+        typeEl.value = 'character';
+        
+        // キャラクター設定パネルを表示
+        if (characterSettings) {
+            characterSettings.style.display = 'block';
+            
+            // 現在の設定値を反映
+            const facingEl = document.getElementById('characterFacing');
+            const gazeEl = document.getElementById('characterGaze');
+            const poseEl = document.getElementById('characterPose');
+            const expressionEl = document.getElementById('characterExpression');
+            
+            if (facingEl) facingEl.value = selectedCharacter.facing || 'front';
+            if (gazeEl) gazeEl.value = selectedCharacter.gaze || 'center';
+            if (poseEl) poseEl.value = selectedCharacter.pose || 'standing';
+            if (expressionEl) expressionEl.value = selectedCharacter.expression || 'neutral';
+        }
+    } else {
+        if (characterSettings) {
+            characterSettings.style.display = 'none';
+        }
+        if (typeEl) typeEl.value = 'bubble';
+    }
+    
+    console.log('🎛️ コントロール更新:', selectedElement?.id || 'なし');
+}
+
+// 🆕 updateSelectedElement関数
+function updateSelectedElement() {
+    if (!selectedElement) return;
+    
+    const scaleEl = document.getElementById('elementScale');
+    const xEl = document.getElementById('elementX');
+    const yEl = document.getElementById('elementY');
+    
+    if (scaleEl) selectedElement.scale = parseFloat(scaleEl.value);
+    if (xEl) selectedElement.x = parseFloat(xEl.value);
+    if (yEl) selectedElement.y = parseFloat(yEl.value);
+    
+    if (selectedCharacter) {
+        if (typeof updateCharacterOverlay === 'function') {
+            updateCharacterOverlay();
+        }
+    } else if (selectedBubble) {
+        if (typeof updateBubbleOverlay === 'function') {
+            updateBubbleOverlay();
+        }
+    }
+    
+    updateStatus();
+    console.log('⚙️ 選択要素更新:', selectedElement?.id || 'なし');
+}
+
+// 🆕 selectCharacter関数
+function selectCharacter(character) {
+    selectedCharacter = character;
+    selectedBubble = null;
+    selectedPanel = null;
+    selectedElement = character;
+    
+    if (typeof updateCharacterOverlay === 'function') {
+        updateCharacterOverlay();
+    }
+    updateControlsFromElement();
+    updateStatus();
+    
+    console.log('👤 キャラクター選択:', character.name);
+    
+    // 状況表示更新
+    if (typeof updateSelectionStatus === 'function') {
+        updateSelectionStatus(`キャラクター「${character.name}」を選択中`);
+    }
+    if (typeof updateOperationStatus === 'function') {
+        updateOperationStatus('キャラクターが選択されました');
+    }
+}
+
+// 🆕 selectPanel関数
+function selectPanel(panel) {
+    selectedPanel = panel;
+    selectedCharacter = null;
+    selectedBubble = null;
+    selectedElement = null;
+    
+    if (typeof redrawCanvas === 'function') {
+        redrawCanvas();
+    }
+    if (typeof drawGuidelines === 'function') {
+        drawGuidelines();
+    }
+    updateStatus();
+    
+    console.log('📐 パネル選択:', panel.id);
+    
+    // 状況表示更新
+    if (typeof updateSelectionStatus === 'function') {
+        updateSelectionStatus(`パネル${panel.id}を選択中`);
+    }
+    if (typeof updateOperationStatus === 'function') {
+        updateOperationStatus('パネルが選択されました');
+    }
+}
+
+// 🆕 clearSelection関数
+function clearSelection() {
+    selectedPanel = null;
+    selectedCharacter = null;
+    selectedBubble = null;
+    selectedElement = null;
+    
+    if (typeof redrawCanvas === 'function') {
+        redrawCanvas();
+    }
+    if (typeof drawGuidelines === 'function') {
+        drawGuidelines();
+    }
+    if (typeof updateCharacterOverlay === 'function') {
+        updateCharacterOverlay();
+    }
+    if (typeof updateBubbleOverlay === 'function') {
+        updateBubbleOverlay();
+    }
+    updateStatus();
+    
+    console.log('❌ 選択解除');
+    
+    // 状況表示更新
+    if (typeof updateSelectionStatus === 'function') {
+        updateSelectionStatus('何も選択されていません');
+    }
+    if (typeof updateOperationStatus === 'function') {
+        updateOperationStatus('選択を解除しました');
+    }
+}
+
+// 🆕 deleteSelected関数
+function deleteSelected() {
+    if (selectedCharacter) {
+        characters = characters.filter(char => char.id !== selectedCharacter.id);
+        selectedCharacter = null;
+        if (typeof updateCharacterOverlay === 'function') {
+            updateCharacterOverlay();
+        }
+        console.log('👤 キャラクター削除');
+        
+        if (typeof showNotification === 'function') {
+            showNotification('キャラクターを削除しました', 'success', 2000);
+        }
+    } else if (selectedBubble) {
+        speechBubbles = speechBubbles.filter(bubble => bubble.id !== selectedBubble.id);
+        selectedBubble = null;
+        if (typeof updateBubbleOverlay === 'function') {
+            updateBubbleOverlay();
+        }
+        console.log('💬 吹き出し削除');
+        
+        if (typeof showNotification === 'function') {
+            showNotification('吹き出しを削除しました', 'success', 2000);
+        }
+    } else if (selectedPanel) {
+        const panelId = selectedPanel.id;
+        
+        // 確認ダイアログ
+        const elements = getElementsInPanel ? getElementsInPanel(panelId) : { characters: [], bubbles: [] };
+        const hasElements = elements.characters?.length > 0 || elements.bubbles?.length > 0;
+        
+        let confirmMessage = `パネル${panelId}を削除しますか？`;
+        if (hasElements) {
+            confirmMessage += `\n（${elements.characters?.length || 0}個のキャラクター、${elements.bubbles?.length || 0}個の吹き出しも削除されます）`;
+        }
+        
+        if (confirm(confirmMessage)) {
+            // パネルと関連要素を削除
+            panels = panels.filter(p => p.id !== panelId);
+            characters = characters.filter(char => char.panelId !== panelId);
+            speechBubbles = speechBubbles.filter(bubble => bubble.panelId !== panelId);
+            
+            selectedPanel = null;
+            
+            // 表示更新
+            if (typeof redrawCanvas === 'function') redrawCanvas();
+            if (typeof drawGuidelines === 'function') drawGuidelines();
+            if (typeof updateCharacterOverlay === 'function') updateCharacterOverlay();
+            if (typeof updateBubbleOverlay === 'function') updateBubbleOverlay();
+            if (typeof updateElementCount === 'function') updateElementCount();
+            
+            console.log('📐 パネル削除:', panelId);
+            
+            if (typeof showNotification === 'function') {
+                showNotification(`パネル${panelId}を削除しました`, 'success', 2000);
+            }
+        }
+    }
+    
+    selectedElement = null;
+    updateStatus();
+    if (typeof updateElementCount === 'function') {
+        updateElementCount();
+    }
+}
+
+// 🆕 toggleGuides関数
+function toggleGuides() {
+    if (typeof drawGuidelines === 'function') {
+        drawGuidelines();
+    }
+    console.log('👁️ ガイドライン表示切り替え');
+}
+
+// 🆕 updateStatus関数
+function updateStatus() {
+    const selectedInfo = document.getElementById('selectedInfo');
+    const panelInfo = document.getElementById('panelInfo');
+    
+    if (!selectedInfo || !panelInfo) return;
+    
+    if (selectedBubble) {
+        const shortText = selectedBubble.text.length > 15 ? 
+            selectedBubble.text.substring(0, 15) + '...' : 
+            selectedBubble.text;
+        selectedInfo.textContent = `吹き出し: ${shortText}`;
+        panelInfo.textContent = `パネル${selectedBubble.panelId} | タイプ: ${selectedBubble.type}`;
+    } else if (selectedCharacter) {
+        selectedInfo.textContent = `キャラクター: ${selectedCharacter.name}`;
+        panelInfo.textContent = `パネル${selectedCharacter.panelId} | サイズ: ${selectedCharacter.scale.toFixed(2)}`;
+    } else if (selectedPanel) {
+        selectedInfo.textContent = `コマ${selectedPanel.id}`;
+        panelInfo.textContent = `位置: (${selectedPanel.x}, ${selectedPanel.y}) | サイズ: ${selectedPanel.width}×${selectedPanel.height}`;
+    } else {
+        selectedInfo.textContent = 'コマを選択してください';
+        panelInfo.textContent = 'パネル情報: 未選択';
+    }
+}
+
+// 🆕 showKeyboardHints関数
+function showKeyboardHints() {
+    const hints = [
+        'パネル操作: 右クリックでメニュー',
+        'ダブルクリック: パネル分割',
+        'H:横分割 V:縦分割 D:複製 R:回転',
+        'E:吹き出し編集 Delete:削除'
+    ];
+    
+    let currentHint = 0;
+    
+    const hintElement = document.createElement('div');
+    hintElement.className = 'keyboard-hint';
+    hintElement.textContent = hints[currentHint];
+    document.body.appendChild(hintElement);
+    
+    // 3秒後に表示
+    setTimeout(() => {
+        hintElement.classList.add('show');
+    }, 3000);
+    
+    // 5秒ごとにヒントを切り替え
+    const hintInterval = setInterval(() => {
+        currentHint = (currentHint + 1) % hints.length;
+        hintElement.textContent = hints[currentHint];
+    }, 5000);
+    
+    // 15秒後に非表示
+    setTimeout(() => {
+        hintElement.classList.remove('show');
+        clearInterval(hintInterval);
+        setTimeout(() => {
+            if (hintElement.parentNode) {
+                hintElement.parentNode.removeChild(hintElement);
+            }
+        }, 300);
+    }, 15000);
+    
+    console.log('💡 キーボードヒント表示開始');
+}
+
+// 🆕 initializeUIControls関数
+function initializeUIControls() {
+    console.log('🎛️ UIコントロール初期化');
+    
+    // Undo/Redoボタンのイベント設定
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    const helpBtn = document.getElementById('helpBtn');
+    
+    if (undoBtn) {
+        undoBtn.addEventListener('click', () => {
+            if (typeof undo === 'function') {
+                undo();
+            }
+            console.log('🖱️ Undoボタンクリック');
+        });
+    }
+    
+    if (redoBtn) {
+        redoBtn.addEventListener('click', () => {
+            if (typeof redo === 'function') {
+                redo();
+            }
+            console.log('🖱️ Redoボタンクリック');
+        });
+    }
+    
+    if (helpBtn) {
+        helpBtn.addEventListener('click', () => {
+            if (typeof showKeyboardHelp === 'function') {
+                showKeyboardHelp();
+            } else {
+                // フォールバック
+                alert('キーボードショートカット:\n\nH: 横分割\nV: 縦分割\nD: 複製\nR: 回転\nE: 編集\nDelete: 削除\nCtrl+Z: 元に戻す\nCtrl+Y: やり直し');
+            }
+            console.log('🖱️ ヘルプボタンクリック');
+        });
+    }
+    
+    // 初期状態の更新
+    if (typeof updateUndoRedoButtons === 'function') {
+        updateUndoRedoButtons();
+    }
+    if (typeof updateOperationStatus === 'function') {
+        updateOperationStatus('準備完了');
+    }
+    if (typeof updateHistoryStatus === 'function') {
+        updateHistoryStatus();
+    }
+    if (typeof updateSelectionStatus === 'function') {
+        updateSelectionStatus('何も選択されていません');
+    }
+    
+    console.log('✅ UIコントロール初期化完了');
+}
+
+// 🆕 getElementsInPanel関数（簡易版）
+function getElementsInPanel(panelId) {
+    return {
+        characters: characters.filter(char => char.panelId === panelId),
+        bubbles: speechBubbles.filter(bubble => bubble.panelId === panelId)
+    };
+}
+
+// グローバルに公開
+window.updateControlsFromElement = updateControlsFromElement;
+window.updateSelectedElement = updateSelectedElement;
+window.selectCharacter = selectCharacter;
+window.selectPanel = selectPanel;
+window.clearSelection = clearSelection;
+window.deleteSelected = deleteSelected;
+window.toggleGuides = toggleGuides;
+window.updateStatus = updateStatus;
+window.showKeyboardHints = showKeyboardHints;
+window.initializeUIControls = initializeUIControls;
+window.getElementsInPanel = getElementsInPanel;
+
+console.log('✅ 不足していた関数をすべて追加しました');
 
 console.log('✅ interaction.js 読み込み完了');
