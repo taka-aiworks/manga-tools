@@ -2183,3 +2183,120 @@ html[data-theme="dark"] .control-btn:focus {
         display: none !important;
     }
 }
+
+
+/* ===== 吹き出し縦書き・リサイズ対応CSS（style.cssに追加） ===== */
+
+/* 吹き出しリサイズハンドル */
+.bubble-resize-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: #28a745;
+    border: 2px solid white;
+    border-radius: 3px;
+    cursor: pointer;
+    z-index: 1002;
+    opacity: 0.8;
+    transition: all 0.2s ease;
+    display: none;
+}
+
+.speech-bubble.selected .bubble-resize-handle {
+    display: block;
+}
+
+.bubble-resize-handle:hover {
+    opacity: 1;
+    transform: scale(1.3);
+    background: #34ce57;
+}
+
+.bubble-resize-handle:active {
+    transform: scale(1.1);
+    background: #1e7e34;
+}
+
+/* リサイズハンドルの位置 */
+.bubble-resize-handle.top-left {
+    top: -5px;
+    left: -5px;
+    cursor: nw-resize;
+}
+
+.bubble-resize-handle.top-right {
+    top: -5px;
+    right: -5px;
+    cursor: ne-resize;
+}
+
+.bubble-resize-handle.bottom-left {
+    bottom: -5px;
+    left: -5px;
+    cursor: sw-resize;
+}
+
+.bubble-resize-handle.bottom-right {
+    bottom: -5px;
+    right: -5px;
+    cursor: se-resize;
+}
+
+/* 縦書きテキスト */
+.speech-bubble.vertical-text {
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vertical-text-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    line-height: 1.0;
+}
+
+.vertical-char {
+    display: block;
+    text-align: center;
+    line-height: 1.2;
+    margin: 1px 0;
+}
+
+/* 縦書き用の吹き出し調整 */
+.speech-bubble.vertical-text {
+    padding: 12px 8px;
+    text-align: center;
+}
+
+.speech-bubble.vertical-text.shout {
+    font-weight: bold;
+    padding: 15px 10px;
+}
+
+.speech-bubble.vertical-text.whisper {
+    font-size: 10px;
+    padding: 10px 6px;
+}
+
+.speech-bubble.vertical-text.thought {
+    padding: 15px 8px;
+}
+
+/* 縦書き切り替えボタン */
+.vertical-toggle-btn {
+    position: absolute;
+    top: -30px;
+    right: 0;
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    cursor: pointer;
+    z-index: 1
