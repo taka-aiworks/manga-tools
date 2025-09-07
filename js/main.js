@@ -16,38 +16,166 @@ let isResizing = false;
 let resizeStartData = {};
 
 // ===== テンプレート定義 =====
+// ===== 完全シーンテンプレート定義 =====
 const templates = {
-    '4koma': [
-        {x: 50, y: 50, width: 500, height: 170, id: 1},
-        {x: 50, y: 240, width: 500, height: 170, id: 2},
-        {x: 50, y: 430, width: 500, height: 170, id: 3},
-        {x: 50, y: 620, width: 500, height: 170, id: 4}
-    ],
-    'dynamic': [
-        {x: 50, y: 50, width: 320, height: 300, id: 1},
-        {x: 390, y: 50, width: 160, height: 140, id: 2},
-        {x: 390, y: 210, width: 160, height: 140, id: 3},
-        {x: 50, y: 370, width: 500, height: 380, id: 4}
-    ],
-    'romance': [
-        {x: 50, y: 50, width: 500, height: 200, id: 1},
-        {x: 50, y: 270, width: 240, height: 200, id: 2},
-        {x: 310, y: 270, width: 240, height: 200, id: 3},
-        {x: 50, y: 490, width: 500, height: 260, id: 4}
-    ],
-    'action': [
-        {x: 50, y: 50, width: 200, height: 300, id: 1},
-        {x: 270, y: 50, width: 280, height: 180, id: 2},
-        {x: 270, y: 250, width: 280, height: 120, id: 3},
-        {x: 50, y: 370, width: 500, height: 380, id: 4}
-    ],
-    'gag': [
-        {x: 50, y: 50, width: 500, height: 150, id: 1},
-        {x: 50, y: 220, width: 160, height: 200, id: 2},
-        {x: 230, y: 220, width: 160, height: 200, id: 3},
-        {x: 410, y: 220, width: 140, height: 200, id: 4},
-        {x: 50, y: 440, width: 500, height: 310, id: 5}
-    ]
+    '4koma': {
+        name: '4コマ漫画',
+        description: 'オーソドックスな4コマ構成',
+        panels: [
+            {x: 50, y: 50, width: 500, height: 170, id: 1},
+            {x: 50, y: 240, width: 500, height: 170, id: 2},
+            {x: 50, y: 430, width: 500, height: 170, id: 3},
+            {x: 50, y: 620, width: 500, height: 170, id: 4}
+        ],
+        characters: [
+            {id: 'char_1_1', panelId: 1, type: 'hero', name: '主人公', x: 0.3, y: 0.6, scale: 0.8, facing: 'right', gaze: 'center', pose: 'standing', expression: 'neutral'},
+            {id: 'char_1_2', panelId: 1, type: 'heroine', name: 'ヒロイン', x: 0.7, y: 0.6, scale: 0.8, facing: 'left', gaze: 'center', pose: 'standing', expression: 'neutral'},
+            
+            {id: 'char_2_1', panelId: 2, type: 'hero', name: '主人公', x: 0.5, y: 0.6, scale: 1.0, facing: 'front', gaze: 'center', pose: 'standing', expression: 'surprised'},
+            
+            {id: 'char_3_1', panelId: 3, type: 'heroine', name: 'ヒロイン', x: 0.5, y: 0.6, scale: 1.2, facing: 'front', gaze: 'center', pose: 'standing', expression: 'happy'},
+            
+            {id: 'char_4_1', panelId: 4, type: 'hero', name: '主人公', x: 0.3, y: 0.6, scale: 0.7, facing: 'right', gaze: 'down', pose: 'standing', expression: 'sad'},
+            {id: 'char_4_2', panelId: 4, type: 'heroine', name: 'ヒロイン', x: 0.7, y: 0.6, scale: 0.7, facing: 'left', gaze: 'right', pose: 'standing', expression: 'neutral'}
+        ],
+        bubbles: [
+            {id: 'bubble_1_1', panelId: 1, type: 'normal', text: 'こんにちは！', x: 0.3, y: 0.3, scale: 1.0, width: 80, height: 40},
+            {id: 'bubble_1_2', panelId: 1, type: 'normal', text: 'はじめまして', x: 0.7, y: 0.2, scale: 1.0, width: 90, height: 40},
+            
+            {id: 'bubble_2_1', panelId: 2, type: 'shout', text: 'えーっ！？', x: 0.5, y: 0.2, scale: 1.2, width: 70, height: 45},
+            
+            {id: 'bubble_3_1', panelId: 3, type: 'normal', text: 'よろしくね♪', x: 0.5, y: 0.2, scale: 1.0, width: 85, height: 40},
+            
+            {id: 'bubble_4_1', panelId: 4, type: 'whisper', text: 'そうだね...', x: 0.3, y: 0.3, scale: 0.9, width: 75, height: 35}
+        ]
+    },
+    
+    'dialogue': {
+        name: '会話シーン',
+        description: '2人の会話に特化したレイアウト',
+        panels: [
+            {x: 50, y: 50, width: 500, height: 200, id: 1},
+            {x: 50, y: 270, width: 240, height: 200, id: 2},
+            {x: 310, y: 270, width: 240, height: 200, id: 3},
+            {x: 50, y: 490, width: 500, height: 260, id: 4}
+        ],
+        characters: [
+            {id: 'char_1_1', panelId: 1, type: 'hero', name: '主人公', x: 0.25, y: 0.6, scale: 0.9, facing: 'right', gaze: 'right', pose: 'standing', expression: 'neutral'},
+            {id: 'char_1_2', panelId: 1, type: 'heroine', name: 'ヒロイン', x: 0.75, y: 0.6, scale: 0.9, facing: 'left', gaze: 'left', pose: 'standing', expression: 'neutral'},
+            
+            {id: 'char_2_1', panelId: 2, type: 'hero', name: '主人公', x: 0.5, y: 0.6, scale: 1.2, facing: 'front', gaze: 'center', pose: 'standing', expression: 'happy'},
+            
+            {id: 'char_3_1', panelId: 3, type: 'heroine', name: 'ヒロイン', x: 0.5, y: 0.6, scale: 1.2, facing: 'front', gaze: 'center', pose: 'standing', expression: 'surprised'},
+            
+            {id: 'char_4_1', panelId: 4, type: 'hero', name: '主人公', x: 0.3, y: 0.6, scale: 0.8, facing: 'right', gaze: 'right', pose: 'standing', expression: 'happy'},
+            {id: 'char_4_2', panelId: 4, type: 'heroine', name: 'ヒロイン', x: 0.7, y: 0.6, scale: 0.8, facing: 'left', gaze: 'left', pose: 'standing', expression: 'happy'}
+        ],
+        bubbles: [
+            {id: 'bubble_1_1', panelId: 1, type: 'normal', text: '今日はいい天気だね', x: 0.25, y: 0.25, scale: 1.0, width: 120, height: 40},
+            {id: 'bubble_1_2', panelId: 1, type: 'normal', text: 'そうですね！', x: 0.75, y: 0.35, scale: 1.0, width: 90, height: 40},
+            
+            {id: 'bubble_2_1', panelId: 2, type: 'normal', text: 'ところで...', x: 0.5, y: 0.2, scale: 1.0, width: 80, height: 40},
+            
+            {id: 'bubble_3_1', panelId: 3, type: 'shout', text: 'えっ！？', x: 0.5, y: 0.2, scale: 1.0, width: 60, height: 40},
+            
+            {id: 'bubble_4_1', panelId: 4, type: 'normal', text: 'よかった〜', x: 0.5, y: 0.2, scale: 1.0, width: 85, height: 40}
+        ]
+    },
+    
+    'action': {
+        name: 'アクションシーン',
+        description: '動きのあるシーンに最適',
+        panels: [
+            {x: 50, y: 50, width: 200, height: 300, id: 1},
+            {x: 270, y: 50, width: 280, height: 180, id: 2},
+            {x: 270, y: 250, width: 280, height: 120, id: 3},
+            {x: 50, y: 370, width: 500, height: 380, id: 4}
+        ],
+        characters: [
+            {id: 'char_1_1', panelId: 1, type: 'hero', name: '主人公', x: 0.5, y: 0.7, scale: 1.0, facing: 'front', gaze: 'up', pose: 'running', expression: 'neutral'},
+            
+            {id: 'char_2_1', panelId: 2, type: 'hero', name: '主人公', x: 0.3, y: 0.6, scale: 0.8, facing: 'right', gaze: 'right', pose: 'pointing', expression: 'angry'},
+            {id: 'char_2_2', panelId: 2, type: 'rival', name: 'ライバル', x: 0.7, y: 0.6, scale: 0.8, facing: 'left', gaze: 'left', pose: 'standing', expression: 'angry'},
+            
+            {id: 'char_3_1', panelId: 3, type: 'rival', name: 'ライバル', x: 0.5, y: 0.6, scale: 1.2, facing: 'front', gaze: 'center', pose: 'standing', expression: 'angry'},
+            
+            {id: 'char_4_1', panelId: 4, type: 'hero', name: '主人公', x: 0.2, y: 0.6, scale: 0.9, facing: 'right', gaze: 'right', pose: 'running', expression: 'neutral'},
+            {id: 'char_4_2', panelId: 4, type: 'rival', name: 'ライバル', x: 0.8, y: 0.6, scale: 0.9, facing: 'left', gaze: 'left', pose: 'running', expression: 'angry'}
+        ],
+        bubbles: [
+            {id: 'bubble_2_1', panelId: 2, type: 'shout', text: '待て！', x: 0.3, y: 0.2, scale: 1.0, width: 60, height: 40},
+            {id: 'bubble_2_2', panelId: 2, type: 'normal', text: 'くっ...', x: 0.7, y: 0.3, scale: 0.9, width: 55, height: 35},
+            
+            {id: 'bubble_3_1', panelId: 3, type: 'shout', text: '逃がすか！', x: 0.5, y: 0.2, scale: 1.2, width: 80, height: 45},
+            
+            {id: 'bubble_4_1', panelId: 4, type: 'normal', text: 'しまった！', x: 0.2, y: 0.3, scale: 1.0, width: 75, height: 40}
+        ]
+    },
+    
+    'emotional': {
+        name: '感情シーン',
+        description: '表情や感情を重視したレイアウト',
+        panels: [
+            {x: 50, y: 50, width: 320, height: 300, id: 1},
+            {x: 390, y: 50, width: 160, height: 140, id: 2},
+            {x: 390, y: 210, width: 160, height: 140, id: 3},
+            {x: 50, y: 370, width: 500, height: 380, id: 4}
+        ],
+        characters: [
+            {id: 'char_1_1', panelId: 1, type: 'heroine', name: 'ヒロイン', x: 0.5, y: 0.6, scale: 1.3, facing: 'front', gaze: 'down', pose: 'standing', expression: 'sad'},
+            
+            {id: 'char_2_1', panelId: 2, type: 'hero', name: '主人公', x: 0.5, y: 0.6, scale: 1.0, facing: 'front', gaze: 'center', pose: 'standing', expression: 'surprised'},
+            
+            {id: 'char_3_1', panelId: 3, type: 'friend', name: '友人', x: 0.5, y: 0.6, scale: 1.0, facing: 'front', gaze: 'center', pose: 'standing', expression: 'neutral'},
+            
+            {id: 'char_4_1', panelId: 4, type: 'hero', name: '主人公', x: 0.3, y: 0.6, scale: 0.9, facing: 'right', gaze: 'right', pose: 'standing', expression: 'happy'},
+            {id: 'char_4_2', panelId: 4, type: 'heroine', name: 'ヒロイン', x: 0.7, y: 0.6, scale: 0.9, facing: 'left', gaze: 'left', pose: 'standing', expression: 'happy'}
+        ],
+        bubbles: [
+            {id: 'bubble_1_1', panelId: 1, type: 'thought', text: 'どうしよう...', x: 0.5, y: 0.2, scale: 1.0, width: 90, height: 40},
+            
+            {id: 'bubble_2_1', panelId: 2, type: 'shout', text: 'あっ！', x: 0.5, y: 0.2, scale: 1.0, width: 50, height: 35},
+            
+            {id: 'bubble_3_1', panelId: 3, type: 'normal', text: '大丈夫？', x: 0.5, y: 0.2, scale: 0.9, width: 70, height: 35},
+            
+            {id: 'bubble_4_1', panelId: 4, type: 'normal', text: 'ありがとう', x: 0.5, y: 0.2, scale: 1.0, width: 85, height: 40}
+        ]
+    },
+    
+    'gag': {
+        name: 'ギャグシーン',
+        description: 'コメディに最適な5コマ構成',
+        panels: [
+            {x: 50, y: 50, width: 500, height: 150, id: 1},
+            {x: 50, y: 220, width: 160, height: 200, id: 2},
+            {x: 230, y: 220, width: 160, height: 200, id: 3},
+            {x: 410, y: 220, width: 140, height: 200, id: 4},
+            {x: 50, y: 440, width: 500, height: 310, id: 5}
+        ],
+        characters: [
+            {id: 'char_1_1', panelId: 1, type: 'hero', name: '主人公', x: 0.5, y: 0.6, scale: 0.8, facing: 'front', gaze: 'center', pose: 'standing', expression: 'neutral'},
+            
+            {id: 'char_2_1', panelId: 2, type: 'hero', name: '主人公', x: 0.5, y: 0.6, scale: 1.0, facing: 'front', gaze: 'center', pose: 'standing', expression: 'surprised'},
+            
+            {id: 'char_3_1', panelId: 3, type: 'hero', name: '主人公', x: 0.5, y: 0.6, scale: 1.2, facing: 'front', gaze: 'up', pose: 'standing', expression: 'surprised'},
+            
+            {id: 'char_4_1', panelId: 4, type: 'hero', name: '主人公', x: 0.5, y: 0.7, scale: 1.0, facing: 'front', gaze: 'down', pose: 'standing', expression: 'sad'},
+            
+            {id: 'char_5_1', panelId: 5, type: 'hero', name: '主人公', x: 0.3, y: 0.6, scale: 0.8, facing: 'right', gaze: 'down', pose: 'standing', expression: 'sad'},
+            {id: 'char_5_2', panelId: 5, type: 'friend', name: '友人', x: 0.7, y: 0.6, scale: 0.8, facing: 'left', gaze: 'left', pose: 'standing', expression: 'neutral'}
+        ],
+        bubbles: [
+            {id: 'bubble_1_1', panelId: 1, type: 'normal', text: '今日はテストだ', x: 0.5, y: 0.3, scale: 1.0, width: 100, height: 40},
+            
+            {id: 'bubble_2_1', panelId: 2, type: 'shout', text: '！？', x: 0.5, y: 0.2, scale: 1.2, width: 40, height: 45},
+            
+            {id: 'bubble_3_1', panelId: 3, type: 'shout', text: 'やばい！', x: 0.5, y: 0.15, scale: 1.3, width: 70, height: 50},
+            
+            {id: 'bubble_4_1', panelId: 4, type: 'whisper', text: '勉強してない...', x: 0.5, y: 0.2, scale: 0.9, width: 110, height: 35},
+            
+            {id: 'bubble_5_1', panelId: 5, type: 'normal', text: 'がんばれよ〜', x: 0.7, y: 0.3, scale: 1.0, width: 90, height: 40}
+        ]
+    }
 };
 
 // キャラクター配置パターン
@@ -136,7 +264,7 @@ function initializeApp() {
 
 // ===== テンプレート読み込み =====
 function loadTemplate(templateName) {
-    console.log('📐 テンプレート読み込み:', templateName);
+    console.log('📐 シーンテンプレート読み込み:', templateName);
     
     // アクティブ状態更新
     document.querySelectorAll('.template-card').forEach(card => {
@@ -148,23 +276,46 @@ function loadTemplate(templateName) {
     }
     
     if (templates[templateName]) {
-        panels = JSON.parse(JSON.stringify(templates[templateName]));
+        const template = templates[templateName];
         
-        // 既存の要素をクリア（必要に応じて）
-        // characters = [];
-        // speechBubbles = [];
+        // パネルを設定
+        panels = JSON.parse(JSON.stringify(template.panels));
         
+        // キャラクターを設定（IDを動的に生成）
+        characters = template.characters.map(char => ({
+            ...char,
+            id: `char_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            rotation: char.rotation || 0,
+            flip: char.flip || false
+        }));
+        
+        // 吹き出しを設定（IDを動的に生成）
+        speechBubbles = template.bubbles.map(bubble => ({
+            ...bubble,
+            id: `bubble_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        }));
+        
+        // 表示更新
         clearOverlays();
         redrawCanvas();
         drawGuidelines();
+        updateCharacterOverlay();
+        updateBubbleOverlay();
         updateStatus();
         updateElementCount();
         
-        console.log(`✅ テンプレート "${templateName}" 適用完了`);
+        console.log(`✅ シーンテンプレート "${templateName}" 適用完了`);
+        console.log(`📊 パネル:${panels.length}, キャラ:${characters.length}, 吹き出し:${speechBubbles.length}`);
+        
+        // 通知表示
+        if (typeof showNotification === 'function') {
+            showNotification(`${template.name} を適用しました`, 'success', 2000);
+        }
     } else {
         console.warn(`⚠️ テンプレート "${templateName}" が見つかりません`);
     }
 }
+
 
 // ===== ユーティリティ関数 =====
 function updateElementCount() {
