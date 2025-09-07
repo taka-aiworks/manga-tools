@@ -1123,3 +1123,232 @@ body.resize-mode {
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
+
+
+/* ===== 完全ページロック CSS（style.cssに追加・置き換え） ===== */
+
+/* リサイズ中の完全ページ保護 */
+body.resize-mode,
+html.resize-mode {
+    position: fixed !important;
+    overflow: hidden !important;
+    width: 100% !important;
+    height: 100% !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    touch-action: none !important;
+    overscroll-behavior: none !important;
+    -webkit-overflow-scrolling: auto !important;
+}
+
+/* すべての子要素の操作を禁止（リサイズハンドルとキャンバス以外） */
+body.resize-mode *,
+html.resize-mode * {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    pointer-events: none !important;
+    touch-action: none !important;
+}
+
+/* リサイズハンドルとキャンバスのみ操作可能 */
+body.resize-mode .resize-handle,
+body.resize-mode #nameCanvas,
+body.resize-mode .character-placeholder {
+    pointer-events: all !important;
+    touch-action: auto !important;
+}
+
+/* スクロールバーを完全に非表示 */
+body.resize-mode::-webkit-scrollbar,
+html.resize-mode::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+body.resize-mode,
+html.resize-mode {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+}
+
+/* リサイズハンドルの強化 */
+.resize-handle {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: #ff6600;
+    border: 3px solid #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 9999;
+    opacity: 0.9;
+    transition: all 0.2s ease;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+    display: none;
+    touch-action: none;
+    user-select: none;
+}
+
+.character-placeholder.selected .resize-handle {
+    display: block !important;
+}
+
+.resize-handle:hover {
+    opacity: 1;
+    transform: scale(1.3);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+}
+
+.resize-handle:active {
+    transform: scale(1.1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.8);
+    background: #ff8833;
+}
+
+/* 各ハンドルの位置と形状 */
+.resize-handle.top-left {
+    top: -7px;
+    left: -7px;
+    cursor: nw-resize;
+}
+
+.resize-handle.top-right {
+    top: -7px;
+    right: -7px;
+    cursor: ne-resize;
+}
+
+.resize-handle.bottom-left {
+    bottom: -7px;
+    left: -7px;
+    cursor: sw-resize;
+}
+
+.resize-handle.bottom-right {
+    bottom: -7px;
+    right: -7px;
+    cursor: se-resize;
+}
+
+.resize-handle.top {
+    top: -7px;
+    left: 50%;
+    transform: translateX(-50%);
+    cursor: n-resize;
+}
+
+.resize-handle.bottom {
+    bottom: -7px;
+    left: 50%;
+    transform: translateX(-50%);
+    cursor: s-resize;
+}
+
+.resize-handle.left {
+    left: -7px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: w-resize;
+}
+
+.resize-handle.right {
+    right: -7px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: e-resize;
+}
+
+/* キャラクタープレースホルダーの改良 */
+.character-placeholder {
+    position: absolute;
+    pointer-events: all;
+    cursor: move;
+    border: 2px solid #0066ff;
+    background: rgba(0, 102, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 9px;
+    color: #0066ff;
+    font-weight: bold;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    padding: 2px;
+    user-select: none;
+    touch-action: none;
+}
+
+.character-placeholder:hover {
+    border-color: #0088ff;
+    background: rgba(0, 136, 255, 0.15);
+    transform: translateY(-1px);
+}
+
+.character-placeholder.selected {
+    border-color: #ff6600;
+    background: rgba(255, 102, 0, 0.2);
+    box-shadow: 0 0 15px rgba(255, 102, 0, 0.7);
+    transform: scale(1.02);
+    position: relative;
+}
+
+/* ダークモード対応 */
+html[data-theme="dark"] .resize-handle {
+    background: #ff8833;
+    border-color: #2d2d2d;
+}
+
+html[data-theme="dark"] .resize-handle:active {
+    background: #ffaa55;
+}
+
+/* デバッグ表示（開発時のみ使用） */
+.debug-resize-mode body.resize-mode {
+    border: 5px solid red !important;
+    background: rgba(255, 0, 0, 0.1) !important;
+}
+
+.debug-resize-mode .resize-handle {
+    background: lime !important;
+    border-color: black !important;
+}
+
+/* モバイル対応 */
+@media (max-width: 768px) {
+    .resize-handle {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .resize-handle.top-left,
+    .resize-handle.top-right,
+    .resize-handle.bottom-left,
+    .resize-handle.bottom-right {
+        top: -10px;
+        left: -10px;
+        right: -10px;
+        bottom: -10px;
+    }
+}
+
+/* フォーカス状態の改良 */
+.resize-handle:focus {
+    outline: 3px solid rgba(255, 102, 0, 0.6);
+    outline-offset: 2px;
+}
+
+/* アニメーション無効化（リサイズ中） */
+body.resize-mode * {
+    animation-play-state: paused !important;
+    transition: none !important;
+}
+
+body.resize-mode .resize-handle {
+    transition: all 0.2s ease !important;
+}
