@@ -14,6 +14,13 @@ let currentScene = 'daily';
 // main.jsのグローバル変数に追加
 let isResizing = false;
 let resizeStartData = {};
+// 🆕 吹き出しリサイズ用変数
+let isBubbleResizing = false;
+let bubbleResizeStartData = {};
+
+// 🆕 スクロール固定用変数
+let originalScrollPosition = { x: 0, y: 0 };
+let isScrollLocked = false;
 
 // ===== テンプレート定義 =====
 // ===== 完全シーンテンプレート定義 =====
