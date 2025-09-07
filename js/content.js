@@ -1,4 +1,4 @@
-// ===== コンテンツ管理モジュール =====
+// ===== コンテンツ管理モジュール（修正版） =====
 
 // ===== キャラクター管理 =====
 function addCharacter(type) {
@@ -182,7 +182,7 @@ function addCharacterEvents(element, character, panel) {
     });
 }
 
-// ===== 吹き出し管理 =====
+// ===== 吹き出し管理（修正版） =====
 function addBubble(bubbleType) {
     if (!selectedPanel) {
         showNotification('まずコマを選択してください', 'warning', 2000);
@@ -206,7 +206,7 @@ function addBubble(bubbleType) {
         scale: 1.0,
         width: Math.max(60, dialogueText.length * 8 + 20),
         height: 40,
-        vertical: false
+        vertical: true  // デフォルトを縦書きに変更
     };
     
     speechBubbles.push(bubble);
@@ -220,7 +220,7 @@ function addBubble(bubbleType) {
         dialogueInput.value = '';
     }
     
-    console.log('💬 吹き出し追加:', bubbleType, bubble.text);
+    console.log('💬 吹き出し追加:', bubbleType, bubble.text, '縦書き:', bubble.vertical);
     showNotification('吹き出しを追加しました', 'success', 2000);
 }
 
@@ -345,57 +345,65 @@ function createBubbleTail(bubble) {
 }
 
 function addBubbleEvents(element, bubble, panel) {
-    let clickCount = 0;
-    let lastClickTime = 0;
+    let editingInProgress = false;  // 編集中フラグを追加
     
     element.addEventListener('mousedown', function(e) {
-        const currentTime = Date.now();
-        clickCount++;
-        
-        console.log(`💬 吹き出しクリック${clickCount}回目:`, bubble.text.substring(0, 10));
-        
-        e.stopPropagation();
-        e.preventDefault();
-        
-        // ダブルクリック判定（400ms以内の2回目のクリック）
-        if (clickCount === 2 && (currentTime - lastClickTime) < 400) {
-            console.log('💬 ダブルクリック検出 - 編集開始');
-            startBubbleEdit(element, bubble);
-            clickCount = 0;
+        // 編集中は通常のマウスダウンを無視
+        if (editingInProgress) {
+            console.log('💬 編集中のため操作無視');
+            e.stopPropagation();
+            e.preventDefault();
             return;
         }
         
-        // シングルクリックの処理（遅延実行）
-        if (clickCount === 1) {
-            lastClickTime = currentTime;
-            
-            setTimeout(() => {
-                if (clickCount === 1) {
-                    console.log('💬 シングルクリック - ドラッグ開始');
-                    
-                    selectBubble(bubble);
-                    isDragging = true;
-                    selectedElement = bubble;
-                    
-                    const coords = getCanvasCoordinates(e);
-                    dragOffset.x = coords.x - (panel.x + panel.width * bubble.x);
-                    dragOffset.y = coords.y - (panel.y + panel.height * bubble.y);
-                }
-                clickCount = 0;
-            }, 200);
-        }
+        console.log('💬 吹き出しクリック:', bubble.text.substring(0, 10));
+        
+        e.stopPropagation();
+        e.preventDefault();
+        
+        selectBubble(bubble);
+        isDragging = true;
+        selectedElement = bubble;
+        
+        const coords = getCanvasCoordinates(e);
+        dragOffset.x = coords.x - (panel.x + panel.width * bubble.x);
+        dragOffset.y = coords.y - (panel.y + panel.height * bubble.y);
+        
+        console.log('🚀 吹き出しドラッグ開始');
     });
     
-    // 右クリックで編集
+    // 右クリックで編集（修正版）
     element.addEventListener('contextmenu', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        console.log('💬 右クリック編集:', bubble.text);
-        startBubbleEdit(element, bubble);
+        
+        // 編集中でない場合のみ開始
+        if (!editingInProgress) {
+            console.log('💬 右クリック編集開始:', bubble.text);
+            editingInProgress = true;
+            startBubbleEdit(element, bubble, () => {
+                editingInProgress = false;  // 編集完了時にフラグを解除
+            });
+        }
+    });
+    
+    // ダブルクリックでも編集可能
+    element.addEventListener('dblclick', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // 編集中でない場合のみ開始
+        if (!editingInProgress) {
+            console.log('💬 ダブルクリック編集開始:', bubble.text);
+            editingInProgress = true;
+            startBubbleEdit(element, bubble, () => {
+                editingInProgress = false;  // 編集完了時にフラグを解除
+            });
+        }
     });
 }
 
-function startBubbleEdit(element, bubble) {
+function startBubbleEdit(element, bubble, onComplete) {
     selectBubble(bubble);
     
     // 編集用のテキストエリアを作成
@@ -403,7 +411,7 @@ function startBubbleEdit(element, bubble) {
     editArea.className = 'bubble-edit-area';
     editArea.value = bubble.text;
     
-    // 縦書きモード切り替えボタン
+    // 書字方向切り替えボタン（横書き/縦書きの順番を変更）
     const verticalToggle = document.createElement('button');
     verticalToggle.className = 'vertical-toggle-btn';
     verticalToggle.textContent = bubble.vertical ? '横書き' : '縦書き';
@@ -459,18 +467,19 @@ function startBubbleEdit(element, bubble) {
     editArea.focus();
     editArea.select();
     
-    // 縦書き切り替えイベント
+    // 書字方向切り替えイベント
     verticalToggle.addEventListener('click', function(e) {
         e.preventDefault();
+        e.stopPropagation();
         bubble.vertical = !bubble.vertical;
         
         verticalToggle.textContent = bubble.vertical ? '横書き' : '縦書き';
         editArea.style.writingMode = bubble.vertical ? 'vertical-rl' : 'horizontal-tb';
         
-        console.log('📝 縦書き切り替え:', bubble.vertical);
+        console.log('📝 書字方向切り替え:', bubble.vertical ? '縦書き' : '横書き');
     });
     
-    // 編集完了イベント
+    // 編集完了処理
     const finishEdit = () => {
         const newText = editArea.value.trim() || '...';
         
@@ -486,9 +495,11 @@ function startBubbleEdit(element, bubble) {
             editContainer.parentNode.removeChild(editContainer);
         }
         
-        // 元の要素を復元
+        // 元の要素を復元（ホバー状態をクリア）
         element.style.opacity = '';
         element.style.pointerEvents = '';
+        element.style.filter = '';  // ホバーエフェクトをクリア
+        element.classList.remove('hover');  // ホバークラスを削除
         
         // 表示を更新
         updateBubbleOverlay();
@@ -501,6 +512,9 @@ function startBubbleEdit(element, bubble) {
         }
         
         showNotification('吹き出しを編集しました', 'success', 2000);
+        
+        // 編集完了コールバックを実行
+        if (onComplete) onComplete();
     };
     
     // Enterで確定、ESCでキャンセル
@@ -515,17 +529,29 @@ function startBubbleEdit(element, bubble) {
                 editContainer.parentNode.removeChild(editContainer);
             }
             
+            // 元の要素を復元（ホバー状態をクリア）
             element.style.opacity = '';
             element.style.pointerEvents = '';
+            element.style.filter = '';
+            element.classList.remove('hover');
             
             console.log('❌ 編集キャンセル');
+            
+            // キャンセル時もコールバックを実行
+            if (onComplete) onComplete();
         }
     });
     
     // フォーカスが外れたら確定
     editArea.addEventListener('blur', function(e) {
+        // ボタンへのフォーカス移動の場合は確定しない
         if (!e.relatedTarget || !e.relatedTarget.classList.contains('vertical-toggle-btn')) {
-            finishEdit();
+            setTimeout(() => {
+                // 少し遅延させて、ボタンクリックとの競合を回避
+                if (document.contains(editArea)) {
+                    finishEdit();
+                }
+            }, 100);
         }
     });
 }
@@ -545,7 +571,7 @@ function adjustBubbleSize(bubble) {
         bubble.height = Math.max(35, lineCount * 22 + 25);
     }
     
-    console.log(`📏 吹き出しサイズ調整: ${bubble.width}x${bubble.height} (${textLength}文字)`);
+    console.log(`📏 吹き出しサイズ調整: ${bubble.width}x${bubble.height} (${textLength}文字, ${bubble.vertical ? '縦書き' : '横書き'})`);
 }
 
 // ===== シーン分析 =====
@@ -645,4 +671,4 @@ window.applyRecommendation = applyRecommendation;
 window.getElementsInPanel = getElementsInPanel;
 window.getContentStats = getContentStats;
 
-console.log('✅ content.js 読み込み完了');
+console.log('✅ content.js 読み込み完了（修正版 - 縦書きデフォルト、編集機能修正）');
