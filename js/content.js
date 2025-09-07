@@ -1,3 +1,334 @@
+// === デバッグ＆修正版 ===
+
+// 1. グローバル変数の確実な初期化
+window.isDragging = false;
+window.isResizing = false;
+window.selectedElement = null;
+window.dragOffset = {x: 0, y: 0};
+window.resizeStartData = {};
+
+console.log('🔧 グローバル変数初期化完了');
+
+// 2. addBubble 関数（縦書き確実版）
+function addBubble(bubbleType) {
+    if (!selectedPanel) {
+        showNotification('まずコマを選択してください', 'warning', 2000);
+        return;
+    }
+    
+    const dialogueText = document.getElementById('dialogueText')?.value.trim() || '';
+    
+    if (!dialogueText && bubbleType !== 'narration') {
+        showNotification('セリフを入力してください', 'warning', 2000);
+        return;
+    }
+    
+    const bubble = {
+        id: `bubble_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        panelId: selectedPanel.id,
+        type: bubbleType,
+        text: dialogueText || 'テキスト',
+        x: 0.5,
+        y: 0.3,
+        scale: 1.0,
+        width: Math.max(60, dialogueText.length * 8 + 20),
+        height: 40,
+        vertical: true  // 確実に縦書きに設定
+    };
+    
+    console.log('💬 吹き出し作成:', bubble.text, 'vertical:', bubble.vertical);
+    
+    speechBubbles.push(bubble);
+    
+    // 履歴に追加
+    addToHistory({
+        type: 'addBubble',
+        bubble: JSON.parse(JSON.stringify(bubble))
+    });
+    
+    updateBubbleOverlay();
+    updateStatus();
+    updateElementCount();
+    
+    // テキストエリアをクリア
+    const dialogueInput = document.getElementById('dialogueText');
+    if (dialogueInput) {
+        dialogueInput.value = '';
+    }
+    
+    showNotification('吹き出しを追加しました', 'success', 2000);
+}
+
+// 3. createBubbleElement 関数（完全縦書き版）
+function createBubbleElement(bubble, panel) {
+    console.log('🔍 吹き出し要素作成開始:', bubble.text, 'vertical:', bubble.vertical);
+    
+    const element = document.createElement('div');
+    element.className = `speech-bubble ${bubble.type}`;
+    element.dataset.bubbleId = bubble.id;
+    
+    // 確実に縦書きを適用
+    if (bubble.vertical) {
+        element.classList.add('vertical-text');
+        console.log('✅ vertical-textクラス追加');
+        
+        // 強制的に縦書きスタイルを適用
+        element.style.writingMode = 'vertical-rl';
+        element.style.textOrientation = 'upright';
+        element.style.direction = 'rtl';
+        
+        // 縦書き用のテキスト作成
+        const chars = bubble.text.split('');
+        const verticalHTML = chars.map(char => {
+            if (char === '\n') return '<br>';
+            if (char === ' ') return '<div style="height:0.5em;"></div>';
+            return `<div style="display:block; text-align:center; line-height:1.2; margin:1px 0;">${char}</div>`;
+        }).join('');
+        
+        element.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%;">${verticalHTML}</div>`;
+        
+    } else {
+        element.textContent = bubble.text;
+        element.style.writingMode = 'horizontal-tb';
+    }
+    
+    console.log('📝 最終的な要素クラス:', element.className);
+    console.log('📝 最終的なスタイル:', element.style.writingMode);
+    
+    // 選択状態の反映
+    if (selectedBubble === bubble) {
+        element.classList.add('selected');
+    }
+    
+    // 基本スタイルを確実に適用
+    const bubbleX = panel.x + (panel.width * bubble.x) - (bubble.width * bubble.scale / 2);
+    const bubbleY = panel.y + (panel.height * bubble.y) - (bubble.height * bubble.scale / 2);
+    
+    Object.assign(element.style, {
+        position: 'absolute',
+        left: bubbleX + 'px',
+        top: bubbleY + 'px',
+        width: (bubble.width * bubble.scale) + 'px',
+        height: (bubble.height * bubble.scale) + 'px',
+        background: 'white',
+        border: '2px solid #333',
+        borderRadius: '20px',
+        padding: '8px 12px',
+        fontSize: '12px',
+        fontWeight: 'bold',
+        color: '#333',
+        cursor: 'move',
+        userSelect: 'none',
+        zIndex: '100',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+    });
+    
+    // イベントリスナー
+    addBubbleEvents(element, bubble, panel);
+    
+    console.log('✅ 吹き出し要素作成完了');
+    return element;
+}
+
+// 4. addCharacterEvents 関数（キャラ移動修正版）
+function addCharacterEvents(element, character, panel) {
+    console.log('👤 キャラクターイベント設定:', character.name);
+    
+    element.addEventListener('mousedown', function(e) {
+        console.log('👤 キャラクタークリック:', character.name);
+        e.stopPropagation();
+        e.preventDefault();
+        
+        // 確実に選択
+        selectCharacter(character);
+        
+        // リサイズハンドルクリックかチェック
+        const isResizeHandle = e.target.classList.contains('resize-handle');
+        
+        if (isResizeHandle) {
+            console.log('🔧 リサイズハンドルクリック');
+            startCharacterResize(character, e);
+        } else {
+            console.log('🚀 キャラクタードラッグ開始');
+            startCharacterDrag(character, panel, e);
+        }
+    });
+}
+
+// 5. キャラクタードラッグ開始関数
+function startCharacterDrag(character, panel, e) {
+    window.isDragging = true;
+    window.selectedElement = character;
+    
+    const coords = getCanvasCoordinates(e);
+    window.dragOffset.x = coords.x - (panel.x + panel.width * character.x);
+    window.dragOffset.y = coords.y - (panel.y + panel.height * character.y);
+    
+    console.log('✅ ドラッグ開始:', window.dragOffset);
+    
+    // documentレベルでマウス移動を監視
+    const handleMouseMove = (moveEvent) => {
+        if (!window.isDragging) return;
+        
+        const moveCoords = getCanvasCoordinates(moveEvent);
+        
+        // 新しい位置を計算
+        const newX = (moveCoords.x - window.dragOffset.x - panel.x) / panel.width;
+        const newY = (moveCoords.y - window.dragOffset.y - panel.y) / panel.height;
+        
+        // 範囲制限
+        character.x = Math.max(0, Math.min(1, newX));
+        character.y = Math.max(0, Math.min(1, newY));
+        
+        // 表示更新
+        updateCharacterOverlay();
+        updateControlsFromElement();
+        
+        console.log('📍 キャラ移動:', character.x.toFixed(3), character.y.toFixed(3));
+    };
+    
+    const handleMouseUp = () => {
+        console.log('🎯 ドラッグ終了');
+        window.isDragging = false;
+        window.selectedElement = null;
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+}
+
+// 6. キャラクターリサイズ開始関数
+function startCharacterResize(character, e) {
+    window.isResizing = true;
+    window.selectedElement = character;
+    
+    const coords = getCanvasCoordinates(e);
+    const cornerType = e.target.classList.contains('resize-handle-top-left') ? 'top-left' :
+                     e.target.classList.contains('resize-handle-top-right') ? 'top-right' :
+                     e.target.classList.contains('resize-handle-bottom-left') ? 'bottom-left' :
+                     'bottom-right';
+                     
+    window.resizeStartData = {
+        startX: coords.x,
+        startY: coords.y,
+        startScale: character.scale,
+        cornerType: cornerType
+    };
+    
+    console.log('🔧 リサイズ開始:', cornerType);
+    
+    // documentレベルでリサイズを監視
+    const handleResizeMove = (moveEvent) => {
+        if (!window.isResizing) return;
+        
+        const moveCoords = getCanvasCoordinates(moveEvent);
+        const deltaX = moveCoords.x - window.resizeStartData.startX;
+        const deltaY = moveCoords.y - window.resizeStartData.startY;
+        
+        let scaleChange = 0;
+        switch(window.resizeStartData.cornerType) {
+            case 'bottom-right':
+                scaleChange = (deltaX + deltaY) * 0.005;
+                break;
+            case 'top-left':
+                scaleChange = -(deltaX + deltaY) * 0.005;
+                break;
+            case 'top-right':
+                scaleChange = (deltaX - deltaY) * 0.005;
+                break;
+            case 'bottom-left':
+                scaleChange = (-deltaX + deltaY) * 0.005;
+                break;
+        }
+        
+        const newScale = window.resizeStartData.startScale + scaleChange;
+        character.scale = Math.max(0.2, Math.min(4.0, newScale));
+        
+        updateCharacterOverlay();
+        updateControlsFromElement();
+        
+        console.log('🔧 リサイズ中:', character.scale.toFixed(2));
+    };
+    
+    const handleResizeEnd = () => {
+        console.log('🔧 リサイズ終了');
+        window.isResizing = false;
+        window.selectedElement = null;
+        window.resizeStartData = {};
+        document.removeEventListener('mousemove', handleResizeMove);
+        document.removeEventListener('mouseup', handleResizeEnd);
+    };
+    
+    document.addEventListener('mousemove', handleResizeMove);
+    document.addEventListener('mouseup', handleResizeEnd);
+}
+
+// 7. 初期化確認関数
+function checkInitialization() {
+    console.log('🔍 初期化状況確認:');
+    console.log('- isDragging:', window.isDragging);
+    console.log('- isResizing:', window.isResizing);
+    console.log('- selectedElement:', window.selectedElement);
+    console.log('- dragOffset:', window.dragOffset);
+    console.log('- panels数:', panels?.length || 0);
+    console.log('- characters数:', characters?.length || 0);
+    console.log('- speechBubbles数:', speechBubbles?.length || 0);
+    
+    return {
+        dragging: window.isDragging,
+        resizing: window.isResizing,
+        panels: panels?.length || 0,
+        characters: characters?.length || 0,
+        bubbles: speechBubbles?.length || 0
+    };
+}
+
+// 8. 緊急デバッグ関数
+function debugCurrentState() {
+    console.log('🚨 現在の状態:');
+    console.log('selectedPanel:', selectedPanel);
+    console.log('selectedCharacter:', selectedCharacter);
+    console.log('selectedBubble:', selectedBubble);
+    
+    if (characters.length > 0) {
+        console.log('👤 キャラクター一覧:');
+        characters.forEach(char => {
+            console.log(`- ${char.name}: (${char.x}, ${char.y}) scale:${char.scale}`);
+        });
+    }
+    
+    if (speechBubbles.length > 0) {
+        console.log('💬 吹き出し一覧:');
+        speechBubbles.forEach(bubble => {
+            console.log(`- "${bubble.text}": vertical:${bubble.vertical} type:${bubble.type}`);
+        });
+    }
+}
+
+// 9. グローバルに公開
+window.addBubble = addBubble;
+window.createBubbleElement = createBubbleElement;
+window.addCharacterEvents = addCharacterEvents;
+window.startCharacterDrag = startCharacterDrag;
+window.startCharacterResize = startCharacterResize;
+window.checkInitialization = checkInitialization;
+window.debugCurrentState = debugCurrentState;
+
+console.log('✅ デバッグ版初期化完了');
+
+
+
+
+
+
+
+
+/*
+
 // ===== コンテンツ管理モジュール =====
 
 // content.js の addCharacter 関数も履歴対応
