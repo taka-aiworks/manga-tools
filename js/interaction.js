@@ -1,3 +1,383 @@
+// ===== コンテキストメニュー改善版 + Undo/Redo機能 =====
+
+// 🆕 操作履歴管理
+let operationHistory = [];
+let currentHistoryIndex = -1;
+const MAX_HISTORY = 50;
+
+// 🆕 操作履歴に追加
+function addToHistory(operation) {
+    // 現在位置より後の履歴を削除
+    operationHistory = operationHistory.slice(0, currentHistoryIndex + 1);
+    
+    // 新しい操作を追加
+    operationHistory.push({
+        ...operation,
+        timestamp: Date.now()
+    });
+    
+    // 最大履歴数を超えた場合は古いものを削除
+    if (operationHistory.length > MAX_HISTORY) {
+        operationHistory.shift();
+    } else {
+        currentHistoryIndex++;
+    }
+    
+    console.log(`📝 履歴追加: ${operation.type} (${currentHistoryIndex + 1}/${operationHistory.length})`);
+    updateUndoRedoButtons();
+}
+
+// 🆕 Undo機能
+function undo() {
+    if (currentHistoryIndex < 0) {
+        console.log('❌ Undo: 履歴がありません');
+        showNotification('元に戻す操作がありません', 'warning', 2000);
+        return;
+    }
+    
+    const operation = operationHistory[currentHistoryIndex];
+    console.log(`⏪ Undo実行: ${operation.type}`);
+    
+    switch (operation.type) {
+        case 'split':
+            undoSplit(operation);
+            break;
+        case 'delete':
+            undoDelete(operation);
+            break;
+        case 'duplicate':
+            undoDuplicate(operation);
+            break;
+        case 'rotate':
+            undoRotate(operation);
+            break;
+        case 'resize':
+            undoResize(operation);
+            break;
+    }
+    
+    currentHistoryIndex--;
+    updateUndoRedoButtons();
+    updateDisplay();
+    showNotification(`${operation.type}を元に戻しました`, 'success', 2000);
+}
+
+// 🆕 Redo機能
+function redo() {
+    if (currentHistoryIndex >= operationHistory.length - 1) {
+        console.log('❌ Redo: やり直す操作がありません');
+        showNotification('やり直す操作がありません', 'warning', 2000);
+        return;
+    }
+    
+    currentHistoryIndex++;
+    const operation = operationHistory[currentHistoryIndex];
+    console.log(`⏩ Redo実行: ${operation.type}`);
+    
+    switch (operation.type) {
+        case 'split':
+            redoSplit(operation);
+            break;
+        case 'delete':
+            redoDelete(operation);
+            break;
+        case 'duplicate':
+            redoDuplicate(operation);
+            break;
+        case 'rotate':
+            redoRotate(operation);
+            break;
+        case 'resize':
+            redoResize(operation);
+            break;
+    }
+    
+    updateUndoRedoButtons();
+    updateDisplay();
+    showNotification(`${operation.type}をやり直しました`, 'success', 2000);
+}
+
+// 🔄 改良版パネル右クリックメニュー表示（視認性改善）
+function showPanelContextMenu(e, panel) {
+    // 既存のメニューを削除
+    const existingMenu = document.querySelector('.panel-context-menu');
+    if (existingMenu) {
+        existingMenu.remove();
+    }
+    
+    const menu = document.createElement('div');
+    menu.className = 'panel-context-menu';
+    
+    // テーマ検出
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    
+    menu.style.cssText = `
+        position: fixed;
+        left: ${e.clientX}px;
+        top: ${e.clientY}px;
+        background: ${isDark ? '#2d2d2d' : 'white'};
+        color: ${isDark ? '#e0e0e0' : '#333'};
+        border: 2px solid #667eea;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0,0,0,${isDark ? '0.6' : '0.3'});
+        z-index: 9999;
+        min-width: 200px;
+        font-size: 13px;
+        overflow: hidden;
+        backdrop-filter: blur(10px);
+        animation: contextMenuSlideIn 0.2s ease;
+    `;
+    
+    const menuItems = [
+        { 
+            text: '📐 横に分割', 
+            action: () => splitPanelWithHistory(panel, 'horizontal'),
+            key: 'H'
+        },
+        { 
+            text: '📏 縦に分割', 
+            action: () => splitPanelWithHistory(panel, 'vertical'),
+            key: 'V'
+        },
+        { 
+            text: '📋 複製', 
+            action: () => duplicatePanelWithHistory(panel),
+            key: 'D'
+        },
+        { 
+            text: '🔄 90度回転', 
+            action: () => rotatePanelWithHistory(panel),
+            key: 'R'
+        },
+        { 
+            text: '📏 サイズ調整', 
+            action: () => startPanelResize(panel),
+            key: 'S'
+        },
+        { text: '─────────', action: null }, // 区切り線
+        { 
+            text: '🗑️ 削除', 
+            action: () => deletePanelWithHistory(panel), 
+            className: 'delete-item',
+            key: 'Del'
+        },
+        { 
+            text: '❌ キャンセル', 
+            action: () => closeContextMenu(),
+            key: 'Esc'
+        }
+    ];
+    
+    menuItems.forEach(item => {
+        if (item.text === '─────────') {
+            const divider = document.createElement('div');
+            divider.style.cssText = `
+                height: 1px;
+                background: ${isDark ? '#444' : '#eee'};
+                margin: 4px 0;
+            `;
+            menu.appendChild(divider);
+            return;
+        }
+        
+        const menuItem = document.createElement('div');
+        menuItem.className = `menu-item ${item.className || ''}`;
+        
+        menuItem.innerHTML = `
+            <span class="menu-text">${item.text}</span>
+            ${item.key ? `<span class="menu-key">${item.key}</span>` : ''}
+        `;
+        
+        menuItem.style.cssText = `
+            padding: 10px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid ${isDark ? '#444' : '#eee'};
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+        `;
+        
+        menuItem.addEventListener('click', () => {
+            if (item.action) {
+                item.action();
+            }
+            closeContextMenu();
+        });
+        
+        menuItem.addEventListener('mouseenter', () => {
+            if (item.className === 'delete-item') {
+                menuItem.style.background = isDark ? '#4a2c2c' : '#ffebee';
+                menuItem.style.color = isDark ? '#ff6b6b' : '#d32f2f';
+            } else {
+                menuItem.style.background = isDark ? '#404040' : '#f0f4ff';
+                menuItem.style.transform = 'translateX(4px)';
+            }
+        });
+        
+        menuItem.addEventListener('mouseleave', () => {
+            menuItem.style.background = '';
+            menuItem.style.color = isDark ? '#e0e0e0' : '#333';
+            menuItem.style.transform = '';
+        });
+        
+        menu.appendChild(menuItem);
+    });
+    
+    document.body.appendChild(menu);
+    
+    // クリック外で閉じる
+    setTimeout(() => {
+        document.addEventListener('click', closeContextMenu, { once: true });
+    }, 100);
+}
+
+// 🆕 履歴付き操作関数
+function splitPanelWithHistory(panel, direction) {
+    const originalPanel = JSON.parse(JSON.stringify(panel));
+    
+    splitPanel(panel, direction);
+    
+    addToHistory({
+        type: 'split',
+        originalPanel: originalPanel,
+        newPanelId: Math.max(...panels.map(p => p.id)),
+        direction: direction
+    });
+}
+
+function deletePanelWithHistory(panel) {
+    const originalPanel = JSON.parse(JSON.stringify(panel));
+    const originalElements = {
+        characters: characters.filter(c => c.panelId === panel.id),
+        bubbles: speechBubbles.filter(b => b.panelId === panel.id)
+    };
+    
+    deletePanel(panel);
+    
+    addToHistory({
+        type: 'delete',
+        originalPanel: originalPanel,
+        originalElements: originalElements
+    });
+}
+
+function duplicatePanelWithHistory(panel) {
+    const originalPanelCount = panels.length;
+    
+    duplicatePanel(panel);
+    
+    const newPanel = panels[panels.length - 1];
+    addToHistory({
+        type: 'duplicate',
+        originalPanel: JSON.parse(JSON.stringify(panel)),
+        newPanel: JSON.parse(JSON.stringify(newPanel))
+    });
+}
+
+function rotatePanelWithHistory(panel) {
+    const originalPanel = JSON.parse(JSON.stringify(panel));
+    
+    rotatePanel(panel);
+    
+    addToHistory({
+        type: 'rotate',
+        panelId: panel.id,
+        originalPanel: originalPanel,
+        newPanel: JSON.parse(JSON.stringify(panel))
+    });
+}
+
+// 🆕 Undo操作の実装
+function undoSplit(operation) {
+    // 新しく作成されたパネルを削除
+    panels = panels.filter(p => p.id !== operation.newPanelId);
+    
+    // 元のパネルを復元
+    const originalPanel = panels.find(p => p.id === operation.originalPanel.id);
+    if (originalPanel) {
+        Object.assign(originalPanel, operation.originalPanel);
+    }
+}
+
+function undoDelete(operation) {
+    // パネルを復元
+    panels.push(operation.originalPanel);
+    
+    // 要素も復元
+    characters.push(...operation.originalElements.characters);
+    speechBubbles.push(...operation.originalElements.bubbles);
+}
+
+function undoDuplicate(operation) {
+    // 複製されたパネルを削除
+    panels = panels.filter(p => p.id !== operation.newPanel.id);
+    
+    // 複製された要素も削除（必要に応じて）
+    characters = characters.filter(c => c.panelId !== operation.newPanel.id);
+    speechBubbles = speechBubbles.filter(b => b.panelId !== operation.newPanel.id);
+}
+
+function undoRotate(operation) {
+    const panel = panels.find(p => p.id === operation.panelId);
+    if (panel) {
+        Object.assign(panel, operation.originalPanel);
+    }
+}
+
+// 🆕 Redo操作の実装
+function redoSplit(operation) {
+    splitPanel(panels.find(p => p.id === operation.originalPanel.id), operation.direction);
+}
+
+function redoDelete(operation) {
+    deletePanel(panels.find(p => p.id === operation.originalPanel.id));
+}
+
+function redoDuplicate(operation) {
+    duplicatePanel(panels.find(p => p.id === operation.originalPanel.id));
+}
+
+function redoRotate(operation) {
+    const panel = panels.find(p => p.id === operation.panelId);
+    if (panel) {
+        Object.assign(panel, operation.newPanel);
+    }
+}
+
+// 🆕 表示更新
+function updateDisplay() {
+    redrawCanvas();
+    drawGuidelines();
+    updateCharacterOverlay();
+    updateBubbleOverlay();
+    updateElementCount();
+}
+
+// 🆕 Undo/Redoボタンの状態更新
+function updateUndoRedoButtons() {
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    
+    if (undoBtn) {
+        undoBtn.disabled = currentHistoryIndex < 0;
+        undoBtn.title = currentHistoryIndex >= 0 ? 
+            `元に戻す: ${operationHistory[currentHistoryIndex]?.type}` : 
+            '元に戻す操作がありません';
+    }
+    
+    if (redoBtn) {
+        redoBtn.disabled = currentHistoryIndex >= operationHistory.length - 1;
+        redoBtn.title = currentHistoryIndex < operationHistory.length - 1 ? 
+            `やり直し: ${operationHistory[currentHistoryIndex + 1]?.type}` : 
+            'やり直す操作がありません';
+    }
+}
+
+console.log('✅ コンテキストメニュー改善 + Undo/Redo機能 読み込み完了');
+
+
 // interaction.jsに以下の関数を追加：
 
 // 🔄 完全置き換え：startResize関数
@@ -919,7 +1299,7 @@ function applyRecommendation() {
     }
 }
 
-// ===== キーボードショートカット（編集機能付き） =====
+// ===== キーボード操作強化版 - handleKeyDown関数完全版 =====
 function handleKeyDown(e) {
     // Ctrl/Cmd キーとの組み合わせ
     if (e.ctrlKey || e.metaKey) {
@@ -928,19 +1308,39 @@ function handleKeyDown(e) {
                 e.preventDefault();
                 saveProject();
                 break;
+                
             case 'e':
                 e.preventDefault();
                 exportToClipStudio();
                 break;
+                
             case 'z':
                 e.preventDefault();
-                // Undo機能（将来実装）
-                console.log('🔄 Undo (未実装)');
+                if (e.shiftKey) {
+                    // Ctrl+Shift+Z または Cmd+Shift+Z でRedo
+                    redo();
+                    console.log('⏩ Ctrl+Shift+Z: Redo実行');
+                } else {
+                    // Ctrl+Z または Cmd+Z でUndo
+                    undo();
+                    console.log('⏪ Ctrl+Z: Undo実行');
+                }
                 break;
+                
             case 'y':
                 e.preventDefault();
-                // Redo機能（将来実装）
-                console.log('🔄 Redo (未実装)');
+                // Ctrl+Y または Cmd+Y でRedo（Windows標準）
+                redo();
+                console.log('⏩ Ctrl+Y: Redo実行');
+                break;
+                
+            case 'd':
+                e.preventDefault();
+                // Ctrl+D でパネル複製
+                if (selectedPanel) {
+                    duplicatePanelWithHistory(selectedPanel);
+                    console.log('⌨️ Ctrl+D: パネル複製');
+                }
                 break;
         }
         return;
@@ -949,31 +1349,53 @@ function handleKeyDown(e) {
     // 単体キー
     switch(e.key) {
         case 'Delete':
-        case 'Backspace':
-            if (selectedElement) {
+            if (selectedPanel) {
+                e.preventDefault();
+                console.log('⌨️ Delete: パネル削除');
+                deletePanelWithHistory(selectedPanel);
+            } else if (selectedElement) {
+                console.log('⌨️ Delete: 要素削除');
                 deleteSelected();
             }
             break;
+            
+        case 'Backspace':
+            // 🆕 Backspaceでも削除可能
+            if (selectedPanel) {
+                e.preventDefault();
+                console.log('⌨️ Backspace: パネル削除');
+                deletePanelWithHistory(selectedPanel);
+            } else if (selectedElement) {
+                e.preventDefault();
+                console.log('⌨️ Backspace: 要素削除');
+                deleteSelected();
+            }
+            break;
+            
         case 'Escape':
             clearSelection();
+            // コンテキストメニューも閉じる
+            closeContextMenu();
+            console.log('⌨️ Escape: 選択解除');
             break;
+            
         case 'g':
             // ガイド表示切り替え
             const showGuides = document.getElementById('showGuides');
             if (showGuides) {
                 showGuides.checked = !showGuides.checked;
                 toggleGuides();
+                console.log('⌨️ G: ガイド切り替え');
             }
             break;
             
-        // 🆕 吹き出し編集機能を追加
+        // 吹き出し編集機能
         case 'e':
-            // E キーで選択された吹き出しを編集
             if (selectedBubble) {
                 e.preventDefault();
                 const bubbleElement = document.querySelector(`[data-bubble-id="${selectedBubble.id}"]`);
                 if (bubbleElement) {
-                    console.log('⌨️ Eキーで編集開始:', selectedBubble.text);
+                    console.log('⌨️ E: 吹き出し編集開始');
                     startBubbleEdit(bubbleElement, selectedBubble);
                 } else {
                     console.warn('⚠️ 吹き出し要素が見つかりません');
@@ -987,44 +1409,142 @@ function handleKeyDown(e) {
             // Shift+E で選択パネル内の全吹き出しを一括編集
             if (e.shiftKey && selectedPanel) {
                 e.preventDefault();
-                console.log('⌨️ Shift+Eで一括編集:', selectedPanel.id);
+                console.log('⌨️ Shift+E: 一括編集');
                 editAllBubblesInPanel(selectedPanel.id);
             }
             break;
-
-            case 'h':
-            // H キーで横分割
+            
+        // パネル編集機能
+        case 'h':
             if (selectedPanel) {
                 e.preventDefault();
-                splitPanel(selectedPanel, 'horizontal');
+                console.log('⌨️ H: 横分割');
+                splitPanelWithHistory(selectedPanel, 'horizontal');
+            } else {
+                console.log('ℹ️ 分割するパネルを選択してください');
             }
             break;
             
-            case 'v':
-                // V キーで縦分割
-                if (selectedPanel) {
-                    e.preventDefault();
-                    splitPanel(selectedPanel, 'vertical');
-                }
-                break;
-                
-            case 'd':
-                // D キーで複製
-                if (selectedPanel) {
-                    e.preventDefault();
-                    duplicatePanel(selectedPanel);
-                }
-                break;
-                
-            case 'r':
-                // R キーで回転
-                if (selectedPanel) {
-                    e.preventDefault();
-                    rotatePanel(selectedPanel);
-                }
-                break;
+        case 'v':
+            if (selectedPanel) {
+                e.preventDefault();
+                console.log('⌨️ V: 縦分割');
+                splitPanelWithHistory(selectedPanel, 'vertical');
+            } else {
+                console.log('ℹ️ 分割するパネルを選択してください');
+            }
+            break;
+            
+        case 'd':
+            if (selectedPanel) {
+                e.preventDefault();
+                console.log('⌨️ D: 複製');
+                duplicatePanelWithHistory(selectedPanel);
+            } else {
+                console.log('ℹ️ 複製するパネルを選択してください');
+            }
+            break;
+            
+        case 'r':
+            if (selectedPanel) {
+                e.preventDefault();
+                console.log('⌨️ R: 回転');
+                rotatePanelWithHistory(selectedPanel);
+            } else {
+                console.log('ℹ️ 回転するパネルを選択してください');
+            }
+            break;
+            
+        case 's':
+            if (selectedPanel && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                console.log('⌨️ S: サイズ調整');
+                startPanelResize(selectedPanel);
+            }
+            break;
+            
+        // 🆕 Undo/Redo（キーボードのみでも操作可能）
+        case 'u':
+            if (e.shiftKey) {
+                // Shift+U でRedo
+                e.preventDefault();
+                redo();
+                console.log('⌨️ Shift+U: Redo実行');
+            } else {
+                // U でUndo
+                e.preventDefault();
+                undo();
+                console.log('⌨️ U: Undo実行');
+            }
+            break;
+            
+        // 🆕 ヘルプ表示
+        case 'F1':
+        case '?':
+            e.preventDefault();
+            showKeyboardHelp();
+            console.log('⌨️ ヘルプ表示');
+            break;
     }
 }
+
+// 🆕 キーボードヘルプ表示
+function showKeyboardHelp() {
+    const helpContent = `
+        <div class="help-content">
+            <h3>🎮 キーボードショートカット</h3>
+            
+            <div class="help-section">
+                <h4>📐 パネル操作</h4>
+                <div class="help-item"><kbd>H</kbd> 横分割</div>
+                <div class="help-item"><kbd>V</kbd> 縦分割</div>
+                <div class="help-item"><kbd>D</kbd> 複製</div>
+                <div class="help-item"><kbd>R</kbd> 90度回転</div>
+                <div class="help-item"><kbd>S</kbd> サイズ調整</div>
+                <div class="help-item"><kbd>Delete</kbd> / <kbd>Backspace</kbd> 削除</div>
+            </div>
+            
+            <div class="help-section">
+                <h4>💬 吹き出し操作</h4>
+                <div class="help-item"><kbd>E</kbd> 編集</div>
+                <div class="help-item"><kbd>Shift+E</kbd> 一括編集</div>
+                <div class="help-item">ダブルクリック 編集</div>
+                <div class="help-item">右クリック 編集</div>
+            </div>
+            
+            <div class="help-section">
+                <h4>🔄 操作履歴</h4>
+                <div class="help-item"><kbd>Ctrl+Z</kbd> 元に戻す</div>
+                <div class="help-item"><kbd>Ctrl+Y</kbd> / <kbd>Ctrl+Shift+Z</kbd> やり直し</div>
+                <div class="help-item"><kbd>U</kbd> 元に戻す</div>
+                <div class="help-item"><kbd>Shift+U</kbd> やり直し</div>
+            </div>
+            
+            <div class="help-section">
+                <h4>⚡ その他</h4>
+                <div class="help-item"><kbd>G</kbd> ガイド表示切り替え</div>
+                <div class="help-item"><kbd>Ctrl+S</kbd> プロジェクト保存</div>
+                <div class="help-item"><kbd>Ctrl+E</kbd> クリスタ用出力</div>
+                <div class="help-item"><kbd>Escape</kbd> 選択解除</div>
+                <div class="help-item"><kbd>F1</kbd> / <kbd>?</kbd> このヘルプ</div>
+            </div>
+        </div>
+    `;
+    
+    if (typeof showModal === 'function') {
+        showModal('キーボードショートカット', helpContent, [
+            { text: '閉じる', class: 'btn-primary', onclick: 'closeModal(this)' }
+        ]);
+    } else {
+        alert('キーボードショートカット:\n\nパネル操作: H(横分割) V(縦分割) D(複製) R(回転) S(サイズ)\n削除: Delete/Backspace\n元に戻す: Ctrl+Z または U\nやり直し: Ctrl+Y または Shift+U');
+    }
+}
+
+console.log('✅ キーボード操作強化版 読み込み完了');
+console.log('⌨️ 新機能: Backspace削除, Ctrl+Z/Y, U/Shift+U, F1ヘルプ');
+
+
+
 // ===== 出力機能 =====
 function exportToClipStudio() {
     const projectData = {
