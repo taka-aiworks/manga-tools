@@ -380,17 +380,16 @@ console.log('✅ コンテキストメニュー改善 + Undo/Redo機能 読み�
 
 // interaction.jsに以下の関数を追加：
 
-// 🔄 完全置き換え：startResize関数
+// 🔄 強化版startResize関数（完全置き換え）
 function startResize(e, character, position) {
     console.log('🔄 リサイズ開始:', character.name, position);
     
-    // 最優先でイベント停止
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
     
-    // ページ全体を完全にロック
-    enablePageLock();
+    // スクロール位置を完全に固定
+    lockScrollPosition();
     
     isResizing = true;
     selectedElement = character;
@@ -404,7 +403,7 @@ function startResize(e, character, position) {
     
     const panel = panels.find(p => p.id === character.panelId);
     if (!panel) {
-        disablePageLock();
+        unlockScrollPosition();
         return;
     }
     
@@ -419,32 +418,20 @@ function startResize(e, character, position) {
         panel: panel
     };
     
-    // グローバルイベントリスナーを最高優先度で設定
-    document.addEventListener('mousemove', handleResizeGlobal, { 
-        passive: false, 
-        capture: true 
-    });
-    document.addEventListener('mouseup', endResizeGlobal, { 
-        passive: false, 
-        capture: true 
-    });
+    // より確実なイベント捕捉
+    const options = { passive: false, capture: true };
     
-    // ウィンドウレベルでも監視
-    window.addEventListener('mousemove', handleResizeGlobal, { 
-        passive: false, 
-        capture: true 
-    });
-    window.addEventListener('mouseup', endResizeGlobal, { 
-        passive: false, 
-        capture: true 
-    });
+    document.addEventListener('mousemove', handleResizeStable, options);
+    document.addEventListener('mouseup', endResizeStable, options);
+    window.addEventListener('mousemove', handleResizeStable, options);
+    window.addEventListener('mouseup', endResizeStable, options);
     
-    // すべてのスクロールイベントを停止
-    window.addEventListener('scroll', preventAllScroll, { passive: false, capture: true });
-    document.addEventListener('wheel', preventAllScroll, { passive: false, capture: true });
-    document.addEventListener('touchmove', preventAllScroll, { passive: false, capture: true });
+    // 追加のスクロール防止
+    document.addEventListener('wheel', preventAllInteraction, options);
+    document.addEventListener('touchmove', preventAllInteraction, options);
+    document.addEventListener('keydown', preventAllInteraction, options);
     
-    console.log('🔒 ページ完全ロック開始');
+    console.log('🔒 完全リサイズモード開始');
 }
 
 // 🆕 新規：ページ完全ロック
@@ -539,15 +526,17 @@ function preventScroll(e) {
 
 
 
-// ===== リサイズ感度調整版 - handleResizeGlobal関数のみ置き換え =====
-
-function handleResizeGlobal(e) {
+// 🔄 安定版handleResize関数
+function handleResizeStable(e) {
     if (!isResizing || !resizeStartData.character) return;
     
-    // 最優先でイベント停止
     e.preventDefault();
-    e.stopPropagation();
     e.stopImmediatePropagation();
+    
+    // スクロール位置を強制的に維持
+    if (window.scrollX !== originalScrollPosition.x || window.scrollY !== originalScrollPosition.y) {
+        window.scrollTo(originalScrollPosition.x, originalScrollPosition.y);
+    }
     
     const rect = canvas.getBoundingClientRect();
     const coords = {
@@ -563,45 +552,36 @@ function handleResizeGlobal(e) {
     let positionChangeX = 0;
     let positionChangeY = 0;
     
-    // 🎯 感度を上げる（0.001 → 0.003）
-    const sensitivity = 0.005;
-    // 🎯 位置変更の感度も上げる（0.2 → 0.4）
-    const positionSensitivity = 0.6;
+    const sensitivity = 0.005;          // 高速調整
+    const positionSensitivity = 0.6;    // 高速調整
     
     switch (data.position) {
         case 'bottom-right':
             scaleChange = (deltaX + deltaY) * sensitivity;
             break;
-            
         case 'top-left':
             scaleChange = -(deltaX + deltaY) * sensitivity;
             positionChangeX = deltaX / data.panel.width * positionSensitivity;
             positionChangeY = deltaY / data.panel.height * positionSensitivity;
             break;
-            
         case 'top-right':
             scaleChange = (deltaX - deltaY) * sensitivity;
             positionChangeY = deltaY / data.panel.height * positionSensitivity;
             break;
-            
         case 'bottom-left':
             scaleChange = (-deltaX + deltaY) * sensitivity;
             positionChangeX = deltaX / data.panel.width * positionSensitivity;
             break;
-            
         case 'right':
             scaleChange = deltaX * sensitivity;
             break;
-            
         case 'left':
             scaleChange = -deltaX * sensitivity;
             positionChangeX = deltaX / data.panel.width * positionSensitivity;
             break;
-            
         case 'bottom':
             scaleChange = deltaY * sensitivity;
             break;
-            
         case 'top':
             scaleChange = -deltaY * sensitivity;
             positionChangeY = deltaY / data.panel.height * positionSensitivity;
@@ -616,16 +596,15 @@ function handleResizeGlobal(e) {
     data.character.x = newX;
     data.character.y = newY;
     
-    updateCharacterOverlay();
-    updateControlsFromElement();
-    
-    // 🎯 リアルタイム感度表示（デバッグ用）
-    if (localStorage.getItem('debugMode') === 'true') {
-        console.log(`📏 Scale: ${newScale.toFixed(3)}, Delta: ${deltaX.toFixed(1)}, ${deltaY.toFixed(1)}`);
-    }
+    // 表示更新（スクロールを起こさないよう注意）
+    requestAnimationFrame(() => {
+        updateCharacterOverlay();
+        updateControlsFromElement();
+    });
     
     return false;
 }
+
 
 // 🎯 感度調整用のヘルパー関数（オプション）
 window.adjustResizeSensitivity = function(newSensitivity) {
@@ -2055,6 +2034,151 @@ function startPanelResizeDrag(e, panel, position) {
     document.addEventListener('mousemove', handleResize);
     document.addEventListener('mouseup', endResize);
 }
+
+// ===== リサイズ時のスクロール問題完全修正 =====
+
+// 🔧 スクロール位置の完全固定システム
+let originalScrollPosition = { x: 0, y: 0 };
+let isScrollLocked = false;
+
+// 🆕 スクロール位置保存・固定
+function lockScrollPosition() {
+    if (isScrollLocked) return;
+    
+    // 現在のスクロール位置を保存
+    originalScrollPosition.x = window.scrollX || document.documentElement.scrollLeft || 0;
+    originalScrollPosition.y = window.scrollY || document.documentElement.scrollTop || 0;
+    
+    console.log('📍 スクロール位置保存:', originalScrollPosition);
+    
+    isScrollLocked = true;
+    
+    // より強力なスクロール固定
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${originalScrollPosition.y}px`;
+    document.body.style.left = `-${originalScrollPosition.x}px`;
+    document.body.style.width = '100%';
+    document.body.style.height = '100%';
+    document.body.style.overflow = 'hidden';
+    
+    // HTMLレベルでも固定
+    document.documentElement.style.position = 'fixed';
+    document.documentElement.style.width = '100%';
+    document.documentElement.style.height = '100%';
+    document.documentElement.style.overflow = 'hidden';
+    
+    // 追加の安全策
+    document.addEventListener('scroll', forceScrollPosition, { passive: false, capture: true });
+    window.addEventListener('scroll', forceScrollPosition, { passive: false, capture: true });
+}
+
+// 🆕 スクロール位置強制復元
+function forceScrollPosition(e) {
+    if (!isScrollLocked) return;
+    
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    
+    // 即座に元の位置に戻す
+    window.scrollTo(originalScrollPosition.x, originalScrollPosition.y);
+    
+    return false;
+}
+
+// 🆕 スクロールロック解除
+function unlockScrollPosition() {
+    if (!isScrollLocked) return;
+    
+    console.log('🔓 スクロール位置復元:', originalScrollPosition);
+    
+    isScrollLocked = false;
+    
+    // スタイルをリセット
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.width = '';
+    document.body.style.height = '';
+    document.body.style.overflow = '';
+    
+    document.documentElement.style.position = '';
+    document.documentElement.style.width = '';
+    document.documentElement.style.height = '';
+    document.documentElement.style.overflow = '';
+    
+    // イベントリスナー削除
+    document.removeEventListener('scroll', forceScrollPosition, { capture: true });
+    window.removeEventListener('scroll', forceScrollPosition, { capture: true });
+    
+    // 元の位置に復元
+    window.scrollTo(originalScrollPosition.x, originalScrollPosition.y);
+    
+    // さらに安全策：少し遅延して再度復元
+    setTimeout(() => {
+        window.scrollTo(originalScrollPosition.x, originalScrollPosition.y);
+    }, 10);
+}
+
+
+
+// 🔄 安定版endResize関数
+function endResizeStable(e) {
+    if (!isResizing) return;
+    
+    console.log('🔓 リサイズ終了 - スクロール復元');
+    
+    isResizing = false;
+    resizeStartData = {};
+    
+    // スクロールロック解除
+    unlockScrollPosition();
+    
+    // イベントリスナー削除
+    const options = { capture: true };
+    document.removeEventListener('mousemove', handleResizeStable, options);
+    document.removeEventListener('mouseup', endResizeStable, options);
+    window.removeEventListener('mousemove', handleResizeStable, options);
+    window.removeEventListener('mouseup', endResizeStable, options);
+    document.removeEventListener('wheel', preventAllInteraction, options);
+    document.removeEventListener('touchmove', preventAllInteraction, options);
+    document.removeEventListener('keydown', preventAllInteraction, options);
+    
+    updateControlsFromElement();
+}
+
+// 🆕 すべてのインタラクションを防止
+function preventAllInteraction(e) {
+    if (isResizing) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return false;
+    }
+}
+
+// 🔄 強制終了の改良
+window.forceEndDrag = function() {
+    console.log('🛑 強制ドラッグ終了');
+    
+    isDragging = false;
+    selectedElement = null;
+    isResizing = false;
+    resizeStartData = {};
+    
+    // スクロールロック解除
+    unlockScrollPosition();
+    
+    // すべてのイベントリスナーを削除
+    const options = { capture: true };
+    document.removeEventListener('mousemove', handleResizeStable, options);
+    document.removeEventListener('mouseup', endResizeStable, options);
+    window.removeEventListener('mousemove', handleResizeStable, options);
+    window.removeEventListener('mouseup', endResizeStable, options);
+    document.removeEventListener('wheel', preventAllInteraction, options);
+    document.removeEventListener('touchmove', preventAllInteraction, options);
+    document.removeEventListener('keydown', preventAllInteraction, options);
+};
+
+console.log('✅ リサイズ時スクロール問題 完全修正版 読み込み完了');
 
 
 
