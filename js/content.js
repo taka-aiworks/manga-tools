@@ -205,7 +205,11 @@ function updateCharacterElementPosition(element, character, panel) {
     });
 }
 
+// content.js の addCharacterEvents 関数を以下に置き換えてください
+
 function addCharacterEvents(element, character, panel) {
+    let isResizeMode = false;
+    
     element.addEventListener('mousedown', function(e) {
         console.log('👤 キャラクタークリック:', character.name);
         e.stopPropagation();
@@ -218,43 +222,110 @@ function addCharacterEvents(element, character, panel) {
         
         selectCharacter(character);
         
-        // コーナーハンドルクリック判定
-        const rect = element.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const clickY = e.clientY - rect.top;
-        const handleSize = 8;
-        
-        // 4つのコーナーをチェック
-        const corners = [
-            { x: 0, y: 0, type: 'top-left' },
-            { x: rect.width - handleSize, y: 0, type: 'top-right' },
-            { x: 0, y: rect.height - handleSize, type: 'bottom-left' },
-            { x: rect.width - handleSize, y: rect.height - handleSize, type: 'bottom-right' }
-        ];
-        
-        let isResizing = false;
-        for (const corner of corners) {
-            if (clickX >= corner.x && clickX <= corner.x + handleSize &&
-                clickY >= corner.y && clickY <= corner.y + handleSize) {
-                console.log('🔧 キャラクターリサイズ開始:', corner.type);
-                startCharacterResize(character, corner.type, e);
-                isResizing = true;
-                break;
-            }
-        }
-        
-        if (!isResizing) {
-            isDragging = true;
+        // リサイズハンドルのクリック判定
+        const target = e.target;
+        if (target.classList.contains('resize-handle')) {
+            console.log('🔧 リサイズハンドルクリック:', target.className);
+            
+            isResizeMode = true;
+            isResizing = true;
             selectedElement = character;
             
             const coords = getCanvasCoordinates(e);
-            dragOffset.x = coords.x - (panel.x + panel.width * character.x);
-            dragOffset.y = coords.y - (panel.y + panel.height * character.y);
+            const cornerType = target.classList.contains('resize-handle-top-left') ? 'top-left' :
+                             target.classList.contains('resize-handle-top-right') ? 'top-right' :
+                             target.classList.contains('resize-handle-bottom-left') ? 'bottom-left' :
+                             'bottom-right';
+                             
+            resizeStartData = {
+                startX: coords.x,
+                startY: coords.y,
+                startScale: character.scale,
+                cornerType: cornerType
+            };
             
-            console.log('🚀 キャラクタードラッグ開始');
+            console.log('🔧 リサイズ開始:', cornerType, 'スケール:', character.scale);
+            return;
+        }
+        
+        // 通常のドラッグ開始
+        isResizeMode = false;
+        isDragging = true;
+        selectedElement = character;
+        
+        const coords = getCanvasCoordinates(e);
+        dragOffset.x = coords.x - (panel.x + panel.width * character.x);
+        dragOffset.y = coords.y - (panel.y + panel.height * character.y);
+        
+        console.log('🚀 キャラクタードラッグ開始');
+    });
+    
+    // マウスアップ時の処理
+    element.addEventListener('mouseup', function(e) {
+        if (isResizeMode) {
+            console.log('🔧 リサイズ完了');
+            isResizeMode = false;
+            isResizing = false;
+            selectedElement = null;
+            resizeStartData = {};
         }
     });
 }
+
+// キャラクターリサイズハンドルを追加する関数も修正
+function addCharacterResizeHandles(element) {
+    const handleSize = 8;
+    const handles = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+    
+    // 既存のハンドルを削除
+    element.querySelectorAll('.resize-handle').forEach(handle => handle.remove());
+    
+    handles.forEach(position => {
+        const handle = document.createElement('div');
+        handle.className = `resize-handle resize-handle-${position}`;
+        handle.style.cssText = `
+            position: absolute;
+            width: ${handleSize}px;
+            height: ${handleSize}px;
+            background: #ff6600;
+            border: 1px solid #fff;
+            cursor: ${position.includes('top') ? (position.includes('left') ? 'nw-resize' : 'ne-resize') : (position.includes('left') ? 'sw-resize' : 'se-resize')};
+            z-index: 1000;
+            border-radius: 2px;
+        `;
+        
+        // 位置設定
+        switch(position) {
+            case 'top-left':
+                handle.style.top = '0px';
+                handle.style.left = '0px';
+                break;
+            case 'top-right':
+                handle.style.top = '0px';
+                handle.style.right = '0px';
+                break;
+            case 'bottom-left':
+                handle.style.bottom = '0px';
+                handle.style.left = '0px';
+                break;
+            case 'bottom-right':
+                handle.style.bottom = '0px';
+                handle.style.right = '0px';
+                break;
+        }
+        
+        // ハンドルにイベントを追加
+        handle.addEventListener('mousedown', function(e) {
+            e.stopPropagation();
+            console.log('🔧 ハンドル直接クリック:', position);
+        });
+        
+        element.appendChild(handle);
+    });
+    
+    console.log('✅ リサイズハンドル追加完了');
+}
+
 
 // キャラクターリサイズ開始
 function startCharacterResize(character, cornerType, e) {
