@@ -1,18 +1,45 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ネーム制作支援ツール - 漫画ネームを簡単作成</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+    <!-- 既存のヘッダー内容の後に以下を追加 -->
     <div class="header">
         <h1>📚 ネーム制作支援ツール</h1>
         <p>コマ割り・キャラ配置・セリフを統合した漫画ネーム作成ツール</p>
-        <button class="theme-toggle" id="themeToggle">🌙 ダークモード</button>
+        
+        <!-- 🆕 操作ボタンエリア追加 -->
+        <div class="header-controls">
+            <div class="undo-redo-group">
+                <button id="undoBtn" class="control-btn undo-btn" disabled title="元に戻す (Ctrl+Z)">
+                    <span class="btn-icon">⏪</span>
+                    <span class="btn-text">元に戻す</span>
+                </button>
+                <button id="redoBtn" class="control-btn redo-btn" disabled title="やり直し (Ctrl+Y)">
+                    <span class="btn-icon">⏩</span>
+                    <span class="btn-text">やり直し</span>
+                </button>
+            </div>
+            
+            <div class="quick-actions">
+                <button id="helpBtn" class="control-btn help-btn" title="キーボードショートカット (F1)">
+                    <span class="btn-icon">❓</span>
+                    <span class="btn-text">ヘルプ</span>
+                </button>
+                
+                <button class="theme-toggle" id="themeToggle">🌙 ダークモード</button>
+            </div>
+        </div>
     </div>
-    
+
+　    　<!-- 🆕 操作状況表示バー -->
+        <div class="operation-status">
+            <div class="status-left">
+                <span id="operationStatus">準備完了</span>
+                <span id="historyStatus">履歴: 0/0</span>
+            </div>
+            <div class="status-right">
+                <span id="selectionStatus">何も選択されていません</span>
+            </div>
+        </div>
+            
     <div class="container">
         <!-- 左パネル：ストーリー構成 -->
         <div class="story-panel">
