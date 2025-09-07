@@ -1106,4 +1106,404 @@ function addResizeHandles(element, character) {
 
 console.log('✅ 強化版リサイズ修正 読み込み完了');
 
+// ===== コマ編集システム - interaction.jsに追加 =====
+
+// 🆕 パネル編集モードの状態管理
+let panelEditMode = false;
+let panelSplitDirection = 'horizontal'; // 'horizontal' or 'vertical'
+
+// 🆕 パネル編集イベントの追加
+function addPanelEditEvents() {
+    // パネル右クリックメニュー
+    canvas.addEventListener('contextmenu', function(e) {
+        const coords = getCanvasCoordinates(e);
+        const clickedPanel = findPanelAt(coords.x, coords.y);
+        
+        if (clickedPanel) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('📐 パネル右クリック:', clickedPanel.id);
+            selectPanel(clickedPanel);
+            showPanelContextMenu(e, clickedPanel);
+        }
+    });
+    
+    // パネルダブルクリックで分割
+    canvas.addEventListener('dblclick', function(e) {
+        const coords = getCanvasCoordinates(e);
+        const clickedPanel = findPanelAt(coords.x, coords.y);
+        
+        if (clickedPanel) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('📐 パネルダブルクリック分割:', clickedPanel.id);
+            splitPanel(clickedPanel, 'horizontal');
+        }
+    });
+    
+    console.log('✅ パネル編集イベント設定完了');
+}
+
+// 🆕 パネル右クリックメニュー表示
+function showPanelContextMenu(e, panel) {
+    // 既存のメニューを削除
+    const existingMenu = document.querySelector('.panel-context-menu');
+    if (existingMenu) {
+        existingMenu.remove();
+    }
+    
+    const menu = document.createElement('div');
+    menu.className = 'panel-context-menu';
+    menu.style.cssText = `
+        position: fixed;
+        left: ${e.clientX}px;
+        top: ${e.clientY}px;
+        background: white;
+        border: 2px solid #667eea;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 9999;
+        min-width: 180px;
+        font-size: 12px;
+        overflow: hidden;
+    `;
+    
+    const menuItems = [
+        { text: '📐 横に分割', action: () => splitPanel(panel, 'horizontal') },
+        { text: '📏 縦に分割', action: () => splitPanel(panel, 'vertical') },
+        { text: '📋 複製', action: () => duplicatePanel(panel) },
+        { text: '🔄 90度回転', action: () => rotatePanel(panel) },
+        { text: '📏 サイズ調整', action: () => startPanelResize(panel) },
+        { text: '🗑️ 削除', action: () => deletePanel(panel), className: 'delete-item' },
+        { text: '❌ キャンセル', action: () => closeContextMenu() }
+    ];
+    
+    menuItems.forEach(item => {
+        const menuItem = document.createElement('div');
+        menuItem.className = `menu-item ${item.className || ''}`;
+        menuItem.textContent = item.text;
+        menuItem.style.cssText = `
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            transition: background 0.2s ease;
+        `;
+        
+        menuItem.addEventListener('click', () => {
+            item.action();
+            closeContextMenu();
+        });
+        
+        menuItem.addEventListener('mouseenter', () => {
+            menuItem.style.background = item.className === 'delete-item' ? '#ffebee' : '#f0f4ff';
+        });
+        
+        menuItem.addEventListener('mouseleave', () => {
+            menuItem.style.background = '';
+        });
+        
+        menu.appendChild(menuItem);
+    });
+    
+    document.body.appendChild(menu);
+    
+    // クリック外で閉じる
+    setTimeout(() => {
+        document.addEventListener('click', closeContextMenu, { once: true });
+    }, 100);
+}
+
+// 🆕 コンテキストメニューを閉じる
+function closeContextMenu() {
+    const menu = document.querySelector('.panel-context-menu');
+    if (menu) {
+        menu.remove();
+    }
+}
+
+// 🆕 パネル分割機能
+function splitPanel(panel, direction = 'horizontal') {
+    console.log(`✂️ パネル分割: ${panel.id}, 方向: ${direction}`);
+    
+    // 既存のパネルサイズを調整
+    const newWidth = direction === 'vertical' ? panel.width / 2 : panel.width;
+    const newHeight = direction === 'horizontal' ? panel.height / 2 : panel.height;
+    
+    // 元のパネルをリサイズ
+    panel.width = newWidth;
+    panel.height = newHeight;
+    
+    // 新しいパネルを作成
+    const newPanel = {
+        id: Math.max(...panels.map(p => p.id)) + 1,
+        x: direction === 'vertical' ? panel.x + newWidth : panel.x,
+        y: direction === 'horizontal' ? panel.y + newHeight : panel.y,
+        width: newWidth,
+        height: newHeight
+    };
+    
+    panels.push(newPanel);
+    
+    // 表示更新
+    redrawCanvas();
+    drawGuidelines();
+    updateCharacterOverlay();
+    updateBubbleOverlay();
+    updateStatus();
+    
+    // 新しいパネルを選択
+    selectPanel(newPanel);
+    
+    console.log(`✅ 分割完了: パネル${panel.id} → パネル${newPanel.id}`);
+    showNotification(`パネル${panel.id}を${direction === 'horizontal' ? '横' : '縦'}に分割しました`, 'success', 2000);
+}
+
+// 🆕 パネル複製機能
+function duplicatePanel(panel) {
+    console.log('📋 パネル複製:', panel.id);
+    
+    const newPanel = {
+        id: Math.max(...panels.map(p => p.id)) + 1,
+        x: panel.x + 20,
+        y: panel.y + 20,
+        width: panel.width,
+        height: panel.height
+    };
+    
+    // キャンバス内に収まるように調整
+    if (newPanel.x + newPanel.width > canvas.width) {
+        newPanel.x = panel.x - 20;
+    }
+    if (newPanel.y + newPanel.height > canvas.height) {
+        newPanel.y = panel.y - 20;
+    }
+    
+    panels.push(newPanel);
+    
+    // 元のパネルの要素も複製（オプション）
+    const originalElements = getElementsInPanel(panel.id);
+    
+    if (originalElements.characters.length > 0 || originalElements.bubbles.length > 0) {
+        const shouldCopyElements = confirm('要素（キャラクター・吹き出し）も複製しますか？');
+        
+        if (shouldCopyElements) {
+            // キャラクター複製
+            originalElements.characters.forEach(char => {
+                const newChar = {
+                    ...char,
+                    id: `char_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+                    panelId: newPanel.id
+                };
+                characters.push(newChar);
+            });
+            
+            // 吹き出し複製
+            originalElements.bubbles.forEach(bubble => {
+                const newBubble = {
+                    ...bubble,
+                    id: `bubble_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+                    panelId: newPanel.id
+                };
+                speechBubbles.push(newBubble);
+            });
+        }
+    }
+    
+    // 表示更新
+    redrawCanvas();
+    drawGuidelines();
+    updateCharacterOverlay();
+    updateBubbleOverlay();
+    updateElementCount();
+    
+    // 新しいパネルを選択
+    selectPanel(newPanel);
+    
+    console.log(`✅ 複製完了: パネル${panel.id} → パネル${newPanel.id}`);
+    showNotification(`パネル${panel.id}を複製しました`, 'success', 2000);
+}
+
+// 🆕 パネル回転機能
+function rotatePanel(panel) {
+    console.log('🔄 パネル回転:', panel.id);
+    
+    // 幅と高さを入れ替え
+    const tempWidth = panel.width;
+    panel.width = panel.height;
+    panel.height = tempWidth;
+    
+    // キャンバス内に収まるように位置調整
+    if (panel.x + panel.width > canvas.width) {
+        panel.x = canvas.width - panel.width;
+    }
+    if (panel.y + panel.height > canvas.height) {
+        panel.y = canvas.height - panel.height;
+    }
+    
+    // 表示更新
+    redrawCanvas();
+    drawGuidelines();
+    updateCharacterOverlay();
+    updateBubbleOverlay();
+    
+    console.log(`✅ 回転完了: パネル${panel.id} (${panel.width}x${panel.height})`);
+    showNotification(`パネル${panel.id}を90度回転しました`, 'success', 2000);
+}
+
+// 🆕 パネル削除機能
+function deletePanel(panel) {
+    console.log('🗑️ パネル削除確認:', panel.id);
+    
+    // 要素がある場合は確認
+    const elements = getElementsInPanel(panel.id);
+    const hasElements = elements.characters.length > 0 || elements.bubbles.length > 0;
+    
+    let confirmMessage = `パネル${panel.id}を削除しますか？`;
+    if (hasElements) {
+        confirmMessage += `\n（${elements.characters.length}個のキャラクター、${elements.bubbles.length}個の吹き出しも削除されます）`;
+    }
+    
+    if (!confirm(confirmMessage)) {
+        console.log('❌ 削除キャンセル');
+        return;
+    }
+    
+    // パネルを削除
+    panels = panels.filter(p => p.id !== panel.id);
+    
+    // 関連する要素も削除
+    characters = characters.filter(char => char.panelId !== panel.id);
+    speechBubbles = speechBubbles.filter(bubble => bubble.panelId !== panel.id);
+    
+    // 選択状態をクリア
+    if (selectedPanel === panel) {
+        clearSelection();
+    }
+    
+    // 表示更新
+    redrawCanvas();
+    drawGuidelines();
+    updateCharacterOverlay();
+    updateBubbleOverlay();
+    updateElementCount();
+    
+    console.log(`✅ 削除完了: パネル${panel.id}`);
+    showNotification(`パネル${panel.id}を削除しました`, 'success', 2000);
+}
+
+// 🆕 パネルリサイズモード開始
+function startPanelResize(panel) {
+    console.log('📏 パネルリサイズモード:', panel.id);
+    
+    selectPanel(panel);
+    
+    // リサイズハンドルをパネルに追加
+    addPanelResizeHandles(panel);
+    
+    showNotification('パネルの角をドラッグしてサイズ調整してください', 'info', 3000);
+}
+
+// 🆕 パネルリサイズハンドル追加
+function addPanelResizeHandles(panel) {
+    // 既存のハンドルを削除
+    document.querySelectorAll('.panel-resize-handle').forEach(h => h.remove());
+    
+    const canvasRect = canvas.getBoundingClientRect();
+    
+    // 4つの角にハンドルを配置
+    const handles = [
+        { position: 'bottom-right', x: panel.x + panel.width, y: panel.y + panel.height }
+    ];
+    
+    handles.forEach(handleInfo => {
+        const handle = document.createElement('div');
+        handle.className = 'panel-resize-handle';
+        handle.style.cssText = `
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: #667eea;
+            border: 3px solid white;
+            border-radius: 4px;
+            cursor: se-resize;
+            z-index: 1001;
+            left: ${canvasRect.left + handleInfo.x - 8}px;
+            top: ${canvasRect.top + handleInfo.y - 8}px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+        `;
+        
+        // リサイズイベント
+        handle.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            startPanelResizeDrag(e, panel, handleInfo.position);
+        });
+        
+        document.body.appendChild(handle);
+    });
+    
+    // 5秒後に自動で非表示
+    setTimeout(() => {
+        document.querySelectorAll('.panel-resize-handle').forEach(h => h.remove());
+    }, 5000);
+}
+
+// 🆕 パネルリサイズドラッグ開始
+function startPanelResizeDrag(e, panel, position) {
+    console.log('📏 パネルリサイズ開始:', panel.id);
+    
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = panel.width;
+    const startHeight = panel.height;
+    
+    const handleResize = (e) => {
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+        
+        panel.width = Math.max(50, startWidth + deltaX);
+        panel.height = Math.max(30, startHeight + deltaY);
+        
+        // キャンバス内に制限
+        if (panel.x + panel.width > canvas.width) {
+            panel.width = canvas.width - panel.x;
+        }
+        if (panel.y + panel.height > canvas.height) {
+            panel.height = canvas.height - panel.y;
+        }
+        
+        redrawCanvas();
+        drawGuidelines();
+        updateCharacterOverlay();
+        updateBubbleOverlay();
+        
+        // ハンドル位置も更新
+        const handle = document.querySelector('.panel-resize-handle');
+        if (handle) {
+            const canvasRect = canvas.getBoundingClientRect();
+            handle.style.left = (canvasRect.left + panel.x + panel.width - 8) + 'px';
+            handle.style.top = (canvasRect.top + panel.y + panel.height - 8) + 'px';
+        }
+    };
+    
+    const endResize = () => {
+        document.removeEventListener('mousemove', handleResize);
+        document.removeEventListener('mouseup', endResize);
+        
+        // ハンドルを削除
+        document.querySelectorAll('.panel-resize-handle').forEach(h => h.remove());
+        
+        console.log(`✅ リサイズ完了: パネル${panel.id} (${panel.width}x${panel.height})`);
+        showNotification(`パネル${panel.id}のサイズを調整しました`, 'success', 2000);
+    };
+    
+    document.addEventListener('mousemove', handleResize);
+    document.addEventListener('mouseup', endResize);
+}
+
+
+
 console.log('✅ interaction.js 読み込み完了');
