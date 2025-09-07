@@ -1,20 +1,20 @@
 // interaction.jsに以下の関数を追加：
 
-// 🔄 置き換え：startResize関数
+// 🔄 完全置き換え：startResize関数
 function startResize(e, character, position) {
     console.log('🔄 リサイズ開始:', character.name, position);
     
+    // 最優先でイベント停止
     e.preventDefault();
     e.stopPropagation();
-    e.stopImmediatePropagation(); // 追加：より強力な伝播防止
+    e.stopImmediatePropagation();
+    
+    // ページ全体を完全にロック
+    enablePageLock();
     
     isResizing = true;
     selectedElement = character;
     selectedCharacter = character;
-    
-    // ページ保護モードを有効化
-    document.body.classList.add('resize-mode');
-    document.documentElement.style.overflow = 'hidden';
     
     const rect = canvas.getBoundingClientRect();
     const coords = {
@@ -23,7 +23,10 @@ function startResize(e, character, position) {
     };
     
     const panel = panels.find(p => p.id === character.panelId);
-    if (!panel) return;
+    if (!panel) {
+        disablePageLock();
+        return;
+    }
     
     resizeStartData = {
         character: character,
@@ -36,20 +39,114 @@ function startResize(e, character, position) {
         panel: panel
     };
     
-    // document全体でマウスイベントを監視（最優先）
-    document.addEventListener('mousemove', handleResize, { 
+    // グローバルイベントリスナーを最高優先度で設定
+    document.addEventListener('mousemove', handleResizeGlobal, { 
         passive: false, 
         capture: true 
     });
-    document.addEventListener('mouseup', endResize, { 
+    document.addEventListener('mouseup', endResizeGlobal, { 
         passive: false, 
         capture: true 
     });
     
-    // スクロール防止
-    window.addEventListener('scroll', preventScroll, { passive: false });
+    // ウィンドウレベルでも監視
+    window.addEventListener('mousemove', handleResizeGlobal, { 
+        passive: false, 
+        capture: true 
+    });
+    window.addEventListener('mouseup', endResizeGlobal, { 
+        passive: false, 
+        capture: true 
+    });
     
-    console.log('🎯 リサイズ開始 - ページ保護モード有効');
+    // すべてのスクロールイベントを停止
+    window.addEventListener('scroll', preventAllScroll, { passive: false, capture: true });
+    document.addEventListener('wheel', preventAllScroll, { passive: false, capture: true });
+    document.addEventListener('touchmove', preventAllScroll, { passive: false, capture: true });
+    
+    console.log('🔒 ページ完全ロック開始');
+}
+
+// 🆕 新規：ページ完全ロック
+function enablePageLock() {
+    // 現在のスクロール位置を保存
+    const scrollX = window.scrollX || document.documentElement.scrollLeft;
+    const scrollY = window.scrollY || document.documentElement.scrollTop;
+    
+    // ページを完全に固定
+    document.body.classList.add('resize-mode');
+    document.documentElement.classList.add('resize-mode');
+    
+    // スタイルを直接適用（CSSより確実）
+    const lockStyles = {
+        position: 'fixed',
+        top: `-${scrollY}px`,
+        left: `-${scrollX}px`,
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden',
+        userSelect: 'none',
+        webkitUserSelect: 'none',
+        mozUserSelect: 'none',
+        msUserSelect: 'none'
+    };
+    
+    Object.assign(document.body.style, lockStyles);
+    Object.assign(document.documentElement.style, {
+        overflow: 'hidden',
+        position: 'fixed',
+        width: '100%',
+        height: '100%'
+    });
+    
+    // 保存された位置を記録
+    document.body.dataset.scrollX = scrollX;
+    document.body.dataset.scrollY = scrollY;
+}
+
+// 🆕 新規：ページロック解除
+function disablePageLock() {
+    // 保存されたスクロール位置を復元
+    const scrollX = parseInt(document.body.dataset.scrollX || '0');
+    const scrollY = parseInt(document.body.dataset.scrollY || '0');
+    
+    // ロッククラスを削除
+    document.body.classList.remove('resize-mode');
+    document.documentElement.classList.remove('resize-mode');
+    
+    // スタイルをリセット
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.width = '';
+    document.body.style.height = '';
+    document.body.style.overflow = '';
+    document.body.style.userSelect = '';
+    document.body.style.webkitUserSelect = '';
+    document.body.style.mozUserSelect = '';
+    document.body.style.msUserSelect = '';
+    
+    document.documentElement.style.overflow = '';
+    document.documentElement.style.position = '';
+    document.documentElement.style.width = '';
+    document.documentElement.style.height = '';
+    
+    // スクロール位置を復元
+    window.scrollTo(scrollX, scrollY);
+    
+    // データ属性をクリア
+    delete document.body.dataset.scrollX;
+    delete document.body.dataset.scrollY;
+}
+
+// 🆕 新規：すべてのスクロールを防止
+function preventAllScroll(e) {
+    if (isResizing) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        return false;
+    }
 }
 
 // 🆕 新規追加：スクロール防止関数
@@ -62,18 +159,14 @@ function preventScroll(e) {
 
 
 
-// 🔄 置き換え：handleResize関数
-function handleResize(e) {
+// 🔄 完全置き換え：handleResize → handleResizeGlobal
+function handleResizeGlobal(e) {
     if (!isResizing || !resizeStartData.character) return;
     
+    // 最優先でイベント停止
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
-    
-    // スクロール位置固定
-    if (window.scrollX !== 0 || window.scrollY !== 0) {
-        window.scrollTo(0, 0);
-    }
     
     const rect = canvas.getBoundingClientRect();
     const coords = {
@@ -89,7 +182,7 @@ function handleResize(e) {
     let positionChangeX = 0;
     let positionChangeY = 0;
     
-    const sensitivity = 0.002; // 感度を下げる
+    const sensitivity = 0.001; // さらに感度を下げる
     
     switch (data.position) {
         case 'bottom-right':
@@ -97,30 +190,30 @@ function handleResize(e) {
             break;
         case 'top-left':
             scaleChange = -(deltaX + deltaY) * sensitivity;
-            positionChangeX = deltaX / data.panel.width * 0.3;
-            positionChangeY = deltaY / data.panel.height * 0.3;
+            positionChangeX = deltaX / data.panel.width * 0.2;
+            positionChangeY = deltaY / data.panel.height * 0.2;
             break;
         case 'top-right':
             scaleChange = (deltaX - deltaY) * sensitivity;
-            positionChangeY = deltaY / data.panel.height * 0.3;
+            positionChangeY = deltaY / data.panel.height * 0.2;
             break;
         case 'bottom-left':
             scaleChange = (-deltaX + deltaY) * sensitivity;
-            positionChangeX = deltaX / data.panel.width * 0.3;
+            positionChangeX = deltaX / data.panel.width * 0.2;
             break;
         case 'right':
             scaleChange = deltaX * sensitivity;
             break;
         case 'left':
             scaleChange = -deltaX * sensitivity;
-            positionChangeX = deltaX / data.panel.width * 0.3;
+            positionChangeX = deltaX / data.panel.width * 0.2;
             break;
         case 'bottom':
             scaleChange = deltaY * sensitivity;
             break;
         case 'top':
             scaleChange = -deltaY * sensitivity;
-            positionChangeY = deltaY / data.panel.height * 0.3;
+            positionChangeY = deltaY / data.panel.height * 0.2;
             break;
     }
     
@@ -139,26 +232,29 @@ function handleResize(e) {
 }
 
 
-// 🔄 置き換え：endResize関数
-function endResize(e) {
+
+// 🔄 完全置き換え：endResize → endResizeGlobal
+function endResizeGlobal(e) {
     if (!isResizing) return;
     
-    console.log('🔄 リサイズ終了 - ページ保護モード解除');
+    console.log('🔓 リサイズ終了 - ページロック解除');
     
     isResizing = false;
     resizeStartData = {};
     
-    // ページ保護モードを解除
-    document.body.classList.remove('resize-mode');
-    document.documentElement.style.overflow = '';
+    // ページロック解除
+    disablePageLock();
     
-    // イベントリスナーを削除
-    document.removeEventListener('mousemove', handleResize, { capture: true });
-    document.removeEventListener('mouseup', endResize, { capture: true });
-    window.removeEventListener('scroll', preventScroll);
+    // すべてのイベントリスナーを削除
+    document.removeEventListener('mousemove', handleResizeGlobal, { capture: true });
+    document.removeEventListener('mouseup', endResizeGlobal, { capture: true });
+    window.removeEventListener('mousemove', handleResizeGlobal, { capture: true });
+    window.removeEventListener('mouseup', endResizeGlobal, { capture: true });
+    window.removeEventListener('scroll', preventAllScroll, { capture: true });
+    document.removeEventListener('wheel', preventAllScroll, { capture: true });
+    document.removeEventListener('touchmove', preventAllScroll, { capture: true });
     
     updateControlsFromElement();
-    window.scrollTo(0, 0);
 }
 
 
@@ -211,21 +307,31 @@ function selectBubble(bubble) {
     console.log('💬 吹き出し選択:', bubble.text.substring(0, 15));
 }
 
-// 🆕 新規追加：強制ドラッグ終了
+
+// 🔄 強化版：forceEndDrag
 window.forceEndDrag = function() {
     console.log('🛑 強制ドラッグ終了');
+    
+    // ドラッグ状態リセット
     isDragging = false;
     selectedElement = null;
     isResizing = false;
     resizeStartData = {};
     
-    document.body.classList.remove('resize-mode');
-    document.documentElement.style.overflow = '';
+    // ページロック解除
+    disablePageLock();
     
-    document.removeEventListener('mousemove', handleResize, { capture: true });
-    document.removeEventListener('mouseup', endResize, { capture: true });
-    window.removeEventListener('scroll', preventScroll);
+    // すべてのイベントリスナーを削除
+    document.removeEventListener('mousemove', handleResizeGlobal, { capture: true });
+    document.removeEventListener('mouseup', endResizeGlobal, { capture: true });
+    window.removeEventListener('mousemove', handleResizeGlobal, { capture: true });
+    window.removeEventListener('mouseup', endResizeGlobal, { capture: true });
+    window.removeEventListener('scroll', preventAllScroll, { capture: true });
+    document.removeEventListener('wheel', preventAllScroll, { capture: true });
+    document.removeEventListener('touchmove', preventAllScroll, { capture: true });
 };
+
+
 
 // 🆕 新規追加：ESCキーで強制終了
 document.addEventListener('keydown', function(e) {
@@ -902,5 +1008,52 @@ function saveProject() {
     console.log('💾 プロジェクト保存完了');
     alert('💾 プロジェクトを保存しました！');
 }
+
+
+// 🆕 リサイズハンドル作成時の改良
+function addResizeHandles(element, character) {
+    const handles = [
+        'top-left', 'top-right', 'bottom-left', 'bottom-right',
+        'top', 'bottom', 'left', 'right'
+    ];
+    
+    handles.forEach(position => {
+        const handle = document.createElement('div');
+        handle.className = `resize-handle ${position}`;
+        handle.dataset.position = position;
+        
+        // 強化されたリサイズイベント
+        handle.addEventListener('mousedown', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            e.stopImmediatePropagation(); // 追加
+            
+            console.log('🎯 リサイズハンドルクリック:', position);
+            startResize(e, character, position);
+        }, { passive: false, capture: true }); // capture: true を追加
+        
+        // タッチイベントも対応
+        handle.addEventListener('touchstart', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            
+            // タッチをマウスイベントに変換
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                bubbles: false,
+                cancelable: true
+            });
+            
+            startResize(mouseEvent, character, position);
+        }, { passive: false, capture: true });
+        
+        element.appendChild(handle);
+    });
+}
+
+console.log('✅ 強化版リサイズ修正 読み込み完了');
 
 console.log('✅ interaction.js 読み込み完了');
